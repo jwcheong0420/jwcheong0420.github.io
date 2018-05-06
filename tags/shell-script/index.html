@@ -171,12 +171,14 @@
         
     
         <h1 class="article-title" itemprop="name">
-        <a href="/2018/04/28/cron_default_shell/">cron에서 shell script 실행 시 주의 사항</a>
+        <a href="/2018/04/28/cron_default_shell/">crontab에서 shell script 실행 시 주의 사항</a>
         </h1>
     
 
         <p class="article-excerpt">
-            
+            reboot할 때마다 script를 실행시킬 일이 생겨서 crontab을 사용하게 되었는데, 이를 통해 알게된 내용을 기술하고자 한다.
+crontab은 ubuntu 기본 패키지이므로 별도의 설치과정이 필요없다.다음의 명령어를 입력하여 작업을 등록할 수 있다.1$ crontab -e
+이 때 crontab을 처음 실행시켰다면 에디터를 고르라는 내용이 뜰 것이다
         </p>
     </div>
 </article>
@@ -235,7 +237,7 @@
                         
                         <div class="item-inner">
                             <p class="item-category"></p>
-                            <p class="item-title"><a href="/2018/04/28/cron_default_shell/" class="title">cron에서 shell script 실행 시 주의 사항</a></p>
+                            <p class="item-title"><a href="/2018/04/28/cron_default_shell/" class="title">crontab에서 shell script 실행 시 주의 사항</a></p>
                             <p class="item-date"><time datetime="2018-04-28T06:49:36.000Z" itemprop="datePublished">2018-04-28</time></p>
                         </div>
                     </li>
@@ -282,7 +284,7 @@
     <div class="widget-wrap widget-list">
         <h3 class="widget-title">tags</h3>
         <div class="widget">
-            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/bash/">bash</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/cron/">cron</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/shell-script/">shell script</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/unix/">unix</a><span class="tag-list-count">1</span></li></ul>
+            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/bash/">bash</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/crontab/">crontab</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/shebang/">shebang</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/shell-script/">shell script</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/unix/">unix</a><span class="tag-list-count">1</span></li></ul>
         </div>
     </div>
 
@@ -292,7 +294,7 @@
     <div class="widget-wrap widget-float">
         <h3 class="widget-title">tag cloud</h3>
         <div class="widget tagcloud">
-            <a href="/tags/bash/" style="font-size: 10px;">bash</a> <a href="/tags/cron/" style="font-size: 10px;">cron</a> <a href="/tags/shell-script/" style="font-size: 10px;">shell script</a> <a href="/tags/unix/" style="font-size: 10px;">unix</a>
+            <a href="/tags/bash/" style="font-size: 10px;">bash</a> <a href="/tags/crontab/" style="font-size: 10px;">crontab</a> <a href="/tags/shebang/" style="font-size: 10px;">shebang</a> <a href="/tags/shell-script/" style="font-size: 10px;">shell script</a> <a href="/tags/unix/" style="font-size: 10px;">unix</a>
         </div>
     </div>
 
