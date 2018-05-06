@@ -7,17 +7,17 @@
     
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
     
-        <meta name="keywords" content="shell script,bash,shebang,linux" />
+        <meta name="keywords" content="linux,shell script,bash,shebang" />
     
     <meta name="description" content="reboot할 때마다 script를 실행시킬 일이 생겨서 cron을 사용하게 되었는데, 삽질을 하면서 알게된 내용을 기술하고자 한다.여러 가지가 엮여있는 내용이라 좀 장황하므로, 맨 마지막 결론만 읽어도 무방하다. croncron은 crontab에 예약된 작업을 반복적으로 실행시키는 데몬이다.cron은 ubuntu 기본 패키지이므로 별도의 설치과정이 필요없">
-<meta name="keywords" content="shell script,bash,shebang,linux">
+<meta name="keywords" content="linux,shell script,bash,shebang">
 <meta property="og:type" content="article">
 <meta property="og:title" content="cron에서 bash script 실행시키기">
 <meta property="og:url" content="http://jwcheong0420.github.io/2018/04/28/ubuntu-cron-bash/index.html">
 <meta property="og:site_name" content="Joowon Cheong&#39;s Blog">
 <meta property="og:description" content="reboot할 때마다 script를 실행시킬 일이 생겨서 cron을 사용하게 되었는데, 삽질을 하면서 알게된 내용을 기술하고자 한다.여러 가지가 엮여있는 내용이라 좀 장황하므로, 맨 마지막 결론만 읽어도 무방하다. croncron은 crontab에 예약된 작업을 반복적으로 실행시키는 데몬이다.cron은 ubuntu 기본 패키지이므로 별도의 설치과정이 필요없">
 <meta property="og:locale" content="en">
-<meta property="og:updated_time" content="2018-05-06T18:21:12.712Z">
+<meta property="og:updated_time" content="2018-05-06T18:26:18.245Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="cron에서 bash script 실행시키기">
 <meta name="twitter:description" content="reboot할 때마다 script를 실행시킬 일이 생겨서 cron을 사용하게 되었는데, 삽질을 하면서 알게된 내용을 기술하고자 한다.여러 가지가 엮여있는 내용이라 좀 장황하므로, 맨 마지막 결론만 읽어도 무방하다. croncron은 crontab에 예약된 작업을 반복적으로 실행시키는 데몬이다.cron은 ubuntu 기본 패키지이므로 별도의 설치과정이 필요없">
@@ -171,7 +171,7 @@
 <h3 id="문제가-되었던-cron-test-과정"><a href="#문제가-되었던-cron-test-과정" class="headerlink" title="문제가 되었던 cron test 과정"></a>문제가 되었던 cron test 과정</h3><p>문제는 여기에서 발생했다.<br>테스트 코드가 매우 복잡했던 관계로 대략적인 뼈대만 적자면, bash script 안에서 flock으로 또 다른 명령어들을 실행하는 구조였다.<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line"><span class="keyword">if</span> [[ -d /path/to/lock/dir ]];<span class="keyword">then</span></span><br><span class="line">    flock -x -o /path/to/lock/file -c <span class="string">'if [[ /test/something ]]; then echo "blah"; fi;'</span></span><br><span class="line"><span class="keyword">fi</span></span><br></pre></td></tr></table></figure></p>
 <p>다음과 같은 에러가 발생했다.<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">/bin/sh: 1: /bin/sh: [[: not found</span><br></pre></td></tr></table></figure></p>
 <p>/bin/bash로 실행하라고 shebang(#!/bin/bash)을 넣었음에도 /bin/sh로 실행되었다는 것에 의문을 품게 되었다.</p>
-<h2 id="cron은-SHELL로-작업을-실행시킨다"><a href="#cron은-SHELL로-작업을-실행시킨다" class="headerlink" title="cron은 $SHELL로 작업을 실행시킨다"></a>cron은 $SHELL로 작업을 실행시킨다</h2><p>수차례 테스트해본 결과, cron은 $SHELL -c ‘등록된 작업’을 실행시킨다는 것을 알게 되었다.<br>이 때 $SHELL은 기본적으로 /bin/sh이다.<br>이는 비단 cron뿐 아니라 flock도 그런 것으로 보이는데, 아래의 테스트 결과에서 알 수 있다.<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line">flock -x -o /root/work/cron/lock -c <span class="string">'ps -ajxf | grep -C3 cron'</span></span><br></pre></td></tr></table></figure></p>
+<h2 id="cron은-default-shell로-작업을-실행시킨다"><a href="#cron은-default-shell로-작업을-실행시킨다" class="headerlink" title="cron은 default shell로 작업을 실행시킨다"></a>cron은 default shell로 작업을 실행시킨다</h2><p>수차례 테스트한 결론부터 말하자면, cron은 default shell 즉, $SHELL -c ‘등록된 작업’을 실행시킨다.<br>이 때 $SHELL은 기본적으로 /bin/sh이다.<br>이는 비단 cron뿐 아니라 flock도 그런 것으로 보이는데, 아래의 테스트 결과에서 알 수 있다.<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line">flock -x -o /root/work/cron/lock -c <span class="string">'ps -ajxf | grep -C3 cron'</span></span><br></pre></td></tr></table></figure></p>
 <p>cron이 위 스크립트를 실행하게 한 결과는 다음과 같다.(불필요한 라인은 삭제했다.)<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">root@dev:~/work/flock<span class="comment"># vi qcreate_shell-nonshebang.log</span></span><br><span class="line">    1   892   892   892 ?           -1 Ss       0   0:00 /usr/sbin/cron -f</span><br><span class="line">  892  4018   892   892 ?           -1 S        0   0:00  \_ /usr/sbin/CRON -f</span><br><span class="line"> 4018  4019  4019  4019 ?           -1 Ss       0   0:00      \_ /bin/sh -c ~/work/cron/test.sh &gt;&gt; ~/work/cron/test.log 2&gt;&amp;1</span><br><span class="line"> 4019  4020  4019  4019 ?           -1 S        0   0:00          \_ /bin/bash /root/work/cron/test.sh</span><br><span class="line"> 4020  4021  4019  4019 ?           -1 S        0   0:00              \_ flock -x -o /root/work/cron/lock -c ps -ajxf | grep -C3 cron</span><br><span class="line"> 4021  4022  4019  4019 ?           -1 S        0   0:00                  \_ /bin/sh -c ps -ajxf | grep -C3 cron</span><br><span class="line"> 4022  4023  4019  4019 ?           -1 R        0   0:00                      \_ ps -ajxf</span><br><span class="line"> 4022  4024  4019  4019 ?           -1 S        0   0:00                      \_ grep -C3 cron</span><br></pre></td></tr></table></figure></p>
 <p>우선 cron은 /bin/sh -c ‘명령’으로 실행시킨다.<br>/bin/sh은 -c의 인자로 온 ‘명령’을 새로운 프로세스를 띄워서 실행시키며, 이 때 shebang을 인식하여 알맞는 shell로 실행시킨다.<br>flock 역시 /bin/sh -c ‘명령’으로 실행시키는 것을 알 수 있다.</p>
 <p>이젠 crontab에 SHELL을 /bin/bash로 등록한 뒤, 똑같은 작업을 수행해보았다.<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">$ crontab -e</span><br><span class="line">SHELL=/bin/bash</span><br><span class="line">* * * * * /root/cron/test.sh &gt;&gt; /root/cron/test.log 2&gt;&amp;1</span><br></pre></td></tr></table></figure></p>
@@ -195,7 +195,7 @@
 
 
 
-    <a data-url="http://jwcheong0420.github.io/2018/04/28/ubuntu-cron-bash/" data-id="cjgv561ak0000a4ywgbtp6klk" class="article-share-link"><i class="fa fa-share"></i>Share</a>
+    <a data-url="http://jwcheong0420.github.io/2018/04/28/ubuntu-cron-bash/" data-id="cjgv5chkz0000ayywzxxeo2af" class="article-share-link"><i class="fa fa-share"></i>Share</a>
 <script>
     (function ($) {
         $('body').on('click', function() {
@@ -301,20 +301,9 @@
     <div class="widget-wrap">
         <h3 class="widget-title">recents</h3>
         <div class="widget">
-            <ul id="recent-post" class="">
+            <ul id="recent-post" class="no-thumbnail">
                 
                     <li>
-                        
-                        <div class="item-thumbnail">
-                            <a href="/2018/04/28/ubuntu-cron-bash/" class="thumbnail">
-    
-    
-        <span class="thumbnail-image thumbnail-none"></span>
-    
-    
-</a>
-
-                        </div>
                         
                         <div class="item-inner">
                             <p class="item-category"></p>
@@ -336,6 +325,16 @@
         <h3 class="widget-title">archives</h3>
         <div class="widget">
             <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">April 2018</a><span class="archive-list-count">1</span></li></ul>
+        </div>
+    </div>
+
+
+            
+                
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">tags</h3>
+        <div class="widget">
+            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/bash/">bash</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/linux/">linux</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/shebang/">shebang</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/shell-script/">shell script</a><span class="tag-list-count">1</span></li></ul>
         </div>
     </div>
 
