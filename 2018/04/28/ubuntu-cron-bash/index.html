@@ -7,17 +7,17 @@
     
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
     
-        <meta name="keywords" content="ubuntu,shell script,bash,shebang" />
+        <meta name="keywords" content="ubuntu,shell script,bash,shebang,cron" />
     
     <meta name="description" content="reboot할 때마다 script를 실행시킬 일이 생겨서 cron을 사용하게 되었는데, 삽질을 하면서 알게된 내용을 기술하고자 한다.여러 가지가 엮여있는 내용이라 좀 장황하므로, 맨 마지막 결론만 읽어도 무방하다. croncron은 crontab에 예약된 작업을 반복적으로 실행시키는 데몬이다.cron은 ubuntu 기본 패키지이므로 별도의 설치과정이 필요없">
-<meta name="keywords" content="ubuntu,shell script,bash,shebang">
+<meta name="keywords" content="ubuntu,shell script,bash,shebang,cron">
 <meta property="og:type" content="article">
 <meta property="og:title" content="cron에서 bash script 실행시키기">
 <meta property="og:url" content="http://jwcheong0420.github.io/2018/04/28/ubuntu-cron-bash/index.html">
 <meta property="og:site_name" content="Joowon&#39;s Blog">
 <meta property="og:description" content="reboot할 때마다 script를 실행시킬 일이 생겨서 cron을 사용하게 되었는데, 삽질을 하면서 알게된 내용을 기술하고자 한다.여러 가지가 엮여있는 내용이라 좀 장황하므로, 맨 마지막 결론만 읽어도 무방하다. croncron은 crontab에 예약된 작업을 반복적으로 실행시키는 데몬이다.cron은 ubuntu 기본 패키지이므로 별도의 설치과정이 필요없">
 <meta property="og:locale" content="en">
-<meta property="og:updated_time" content="2018-05-07T15:30:24.371Z">
+<meta property="og:updated_time" content="2018-05-09T13:44:44.705Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="cron에서 bash script 실행시키기">
 <meta name="twitter:description" content="reboot할 때마다 script를 실행시킬 일이 생겨서 cron을 사용하게 되었는데, 삽질을 하면서 알게된 내용을 기술하고자 한다.여러 가지가 엮여있는 내용이라 좀 장황하므로, 맨 마지막 결론만 읽어도 무방하다. croncron은 crontab에 예약된 작업을 반복적으로 실행시키는 데몬이다.cron은 ubuntu 기본 패키지이므로 별도의 설치과정이 필요없">
@@ -158,7 +158,7 @@
                 
     <div class="article-tag">
         <i class="fa fa-tag"></i>
-        <a class="tag-link" href="/tags/bash/">bash</a>, <a class="tag-link" href="/tags/shebang/">shebang</a>, <a class="tag-link" href="/tags/shell-script/">shell script</a>, <a class="tag-link" href="/tags/ubuntu/">ubuntu</a>
+        <a class="tag-link" href="/tags/bash/">bash</a>, <a class="tag-link" href="/tags/cron/">cron</a>, <a class="tag-link" href="/tags/shebang/">shebang</a>, <a class="tag-link" href="/tags/shell-script/">shell script</a>, <a class="tag-link" href="/tags/ubuntu/">ubuntu</a>
     </div>
 
             </div>
@@ -197,7 +197,7 @@
 
 
 
-    <a data-url="http://jwcheong0420.github.io/2018/04/28/ubuntu-cron-bash/" data-id="cjgwekm2o00016uywg4zve32i" class="article-share-link"><i class="fa fa-share"></i>Share</a>
+    <a data-url="http://jwcheong0420.github.io/2018/04/28/ubuntu-cron-bash/" data-id="cjgz5ot2400003mywnveyltkh" class="article-share-link"><i class="fa fa-share"></i>Share</a>
 <script>
     (function ($) {
         $('body').on('click', function() {
@@ -366,7 +366,7 @@
     <div class="widget-wrap widget-float">
         <h3 class="widget-title">tag cloud</h3>
         <div class="widget tagcloud">
-            <a href="/tags/bash/" style="font-size: 10px;">bash</a> <a href="/tags/hostname/" style="font-size: 10px;">hostname</a> <a href="/tags/shebang/" style="font-size: 10px;">shebang</a> <a href="/tags/shell-script/" style="font-size: 10px;">shell script</a> <a href="/tags/ubuntu/" style="font-size: 20px;">ubuntu</a>
+            <a href="/tags/bash/" style="font-size: 10px;">bash</a> <a href="/tags/cron/" style="font-size: 10px;">cron</a> <a href="/tags/hostname/" style="font-size: 10px;">hostname</a> <a href="/tags/shebang/" style="font-size: 10px;">shebang</a> <a href="/tags/shell-script/" style="font-size: 10px;">shell script</a> <a href="/tags/ubuntu/" style="font-size: 20px;">ubuntu</a>
         </div>
     </div>
 
