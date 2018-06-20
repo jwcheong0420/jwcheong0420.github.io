@@ -3,25 +3,25 @@
 <head>
     <meta charset="utf-8">
     
-    <title>tomcat-same-context-root | Joowon&#39;s Blog</title>
+    <title>tomcat에 동일한 context root를 가진 web module 실행 시 발생하는 에러 | Joowon&#39;s Blog</title>
     
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
     
         <meta name="keywords" content="eclispe,tomcat" />
     
-    <meta name="description" content="프로그램을 작성하다보면 무의식적으로 동일한 context root를 사용하게 될 때가 있다.예를 들면 강의를 듣다가 예제 프로젝트를 모두 import해두고 하나씩 실행해볼 때라던가그럴 때라던가… 그럴 때밖에 없나…하지만 영문 모를 에러에 당황할 사람들을 위해 해결 방법을 공유해본다. 에러 내용동일한 context root를 사용하는 프로젝트를 서버에 동시에">
+    <meta name="description" content="코딩하다보면 무의식적으로 동일한 context root를 사용하게 될 때가 있다.예를 들면 강의를 듣다가 예제 프로젝트를 모두 import해두고 하나씩 실행해볼 때라던가그럴 때라던가… 그럴 때밖에 없나…하지만 영문 모를 에러에 당황할 사람들을 위해 해결 방법을 공유해본다. 에러 내용동일한 context root를 사용하는 웹 모듈(Project)를 서버에">
 <meta name="keywords" content="eclispe,tomcat">
 <meta property="og:type" content="article">
-<meta property="og:title" content="tomcat-same-context-root">
+<meta property="og:title" content="tomcat에 동일한 context root를 가진 web module 실행 시 발생하는 에러">
 <meta property="og:url" content="http://jwcheong0420.github.io/2018/06/20/tomcat-same-context-root/index.html">
 <meta property="og:site_name" content="Joowon&#39;s Blog">
-<meta property="og:description" content="프로그램을 작성하다보면 무의식적으로 동일한 context root를 사용하게 될 때가 있다.예를 들면 강의를 듣다가 예제 프로젝트를 모두 import해두고 하나씩 실행해볼 때라던가그럴 때라던가… 그럴 때밖에 없나…하지만 영문 모를 에러에 당황할 사람들을 위해 해결 방법을 공유해본다. 에러 내용동일한 context root를 사용하는 프로젝트를 서버에 동시에">
+<meta property="og:description" content="코딩하다보면 무의식적으로 동일한 context root를 사용하게 될 때가 있다.예를 들면 강의를 듣다가 예제 프로젝트를 모두 import해두고 하나씩 실행해볼 때라던가그럴 때라던가… 그럴 때밖에 없나…하지만 영문 모를 에러에 당황할 사람들을 위해 해결 방법을 공유해본다. 에러 내용동일한 context root를 사용하는 웹 모듈(Project)를 서버에">
 <meta property="og:locale" content="en">
 <meta property="og:image" content="http://jwcheong0420.github.io/images/tomcat-same-context-root/launching-tomcat-error.png">
-<meta property="og:updated_time" content="2018-06-20T11:00:15.410Z">
+<meta property="og:updated_time" content="2018-06-20T11:08:25.687Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="tomcat-same-context-root">
-<meta name="twitter:description" content="프로그램을 작성하다보면 무의식적으로 동일한 context root를 사용하게 될 때가 있다.예를 들면 강의를 듣다가 예제 프로젝트를 모두 import해두고 하나씩 실행해볼 때라던가그럴 때라던가… 그럴 때밖에 없나…하지만 영문 모를 에러에 당황할 사람들을 위해 해결 방법을 공유해본다. 에러 내용동일한 context root를 사용하는 프로젝트를 서버에 동시에">
+<meta name="twitter:title" content="tomcat에 동일한 context root를 가진 web module 실행 시 발생하는 에러">
+<meta name="twitter:description" content="코딩하다보면 무의식적으로 동일한 context root를 사용하게 될 때가 있다.예를 들면 강의를 듣다가 예제 프로젝트를 모두 import해두고 하나씩 실행해볼 때라던가그럴 때라던가… 그럴 때밖에 없나…하지만 영문 모를 에러에 당황할 사람들을 위해 해결 방법을 공유해본다. 에러 내용동일한 context root를 사용하는 웹 모듈(Project)를 서버에">
 <meta name="twitter:image" content="http://jwcheong0420.github.io/images/tomcat-same-context-root/launching-tomcat-error.png">
     
 
@@ -154,7 +154,7 @@
                 
     
         <h1 class="article-title" itemprop="name">
-        tomcat-same-context-root
+        tomcat에 동일한 context root를 가진 web module 실행 시 발생하는 에러
         </h1>
     
 
@@ -179,11 +179,12 @@
         
         
         <div class="article-entry" itemprop="articleBody">
-            <p>프로그램을 작성하다보면 무의식적으로 동일한 context root를 사용하게 될 때가 있다.<br>예를 들면 강의를 듣다가 예제 프로젝트를 모두 import해두고 하나씩 실행해볼 때라던가<br>그럴 때라던가… 그럴 때밖에 없나…<br>하지만 영문 모를 에러에 당황할 사람들을 위해 해결 방법을 공유해본다.</p>
-<h2 id="에러-내용"><a href="#에러-내용" class="headerlink" title="에러 내용"></a>에러 내용</h2><p>동일한 context root를 사용하는 프로젝트를 서버에 동시에 올릴 경우 다음과 같은 에러가 발생한다.<br><img src="/images/tomcat-same-context-root/launching-tomcat-error.png" alt="" title="error occurred while launching tomcat"></p>
+            <p>코딩하다보면 무의식적으로 동일한 context root를 사용하게 될 때가 있다.<br>예를 들면 강의를 듣다가 예제 프로젝트를 모두 import해두고 하나씩 실행해볼 때라던가<br>그럴 때라던가… 그럴 때밖에 없나…<br>하지만 영문 모를 에러에 당황할 사람들을 위해 해결 방법을 공유해본다.</p>
+<h2 id="에러-내용"><a href="#에러-내용" class="headerlink" title="에러 내용"></a>에러 내용</h2><p>동일한 context root를 사용하는 웹 모듈(Project)를 서버에 동시에 올릴 경우 다음과 같은 에러가 발생한다.<br><img src="/images/tomcat-same-context-root/launching-tomcat-error.png" alt="" title="error occurred while launching tomcat"></p>
 <blockquote>
 <p>Two or more Web modules defined in the configuration have the same context root (/ex). To start this server you will need to remove the duplicate(s).</p>
 </blockquote>
+<p>여기에서 context root는 ex다.</p>
 <h2 id="해결-방법"><a href="#해결-방법" class="headerlink" title="해결 방법"></a>해결 방법</h2><p>Project 우클릭 &gt; Run As &gt; Run on Server를 클릭 후, Next를 눌러 다음 페이지로 넘어간다.<br><img src="/images/tomcat-same-context-root/run-on-server-add-and-remove.png" alt="" title="add and remove project at run on server page"><br>우측 목록에서 실행하기를 원하는 프로젝트만 남기고 다른 프로젝트를 Remove한다.</p>
 
         </div>
@@ -192,7 +193,7 @@
 
 
 
-    <a data-url="http://jwcheong0420.github.io/2018/06/20/tomcat-same-context-root/" data-id="cjin0b48u00048vyw57t2ea2p" class="article-share-link"><i class="fa fa-share"></i>Share</a>
+    <a data-url="http://jwcheong0420.github.io/2018/06/20/tomcat-same-context-root/" data-id="cjin0l9to0004bhywwern5c9v" class="article-share-link"><i class="fa fa-share"></i>Share</a>
 <script>
     (function ($) {
         $('body').on('click', function() {
@@ -315,7 +316,7 @@
                         
                         <div class="item-inner">
                             <p class="item-category"><a class="article-category-link" href="/categories/web/">web</a><i class="icon fa fa-angle-right"></i><a class="article-category-link" href="/categories/web/etc/">etc</a></p>
-                            <p class="item-title"><a href="/2018/06/20/tomcat-same-context-root/" class="title">tomcat-same-context-root</a></p>
+                            <p class="item-title"><a href="/2018/06/20/tomcat-same-context-root/" class="title">tomcat에 동일한 context root를 가진 web module 실행 시 발생하는 에러</a></p>
                             <p class="item-date"><time datetime="2018-06-20T09:48:22.000Z" itemprop="datePublished">2018-06-20</time></p>
                         </div>
                     </li>
