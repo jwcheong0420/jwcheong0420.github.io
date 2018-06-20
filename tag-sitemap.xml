@@ -44,20 +44,6 @@
     </url>
 
     <url>
-        <loc>http://jwcheong0420.github.io/tags/eclispe/</loc>
-        <lastmod>2018-05-09T14:35:19.091Z</lastmod>
-        <changefreq>weekly</changefreq>
-        <priority>0.2</priority>
-    </url>
-
-    <url>
-        <loc>http://jwcheong0420.github.io/tags/tomcat/</loc>
-        <lastmod>2018-05-09T14:35:19.091Z</lastmod>
-        <changefreq>weekly</changefreq>
-        <priority>0.2</priority>
-    </url>
-
-    <url>
         <loc>http://jwcheong0420.github.io/tags/boogie-board/</loc>
         <lastmod>2018-05-19T17:29:43.617Z</lastmod>
         <changefreq>weekly</changefreq>
@@ -67,6 +53,20 @@
     <url>
         <loc>http://jwcheong0420.github.io/tags/boogie-board-sync-9-7/</loc>
         <lastmod>2018-05-19T17:29:43.617Z</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.2</priority>
+    </url>
+
+    <url>
+        <loc>http://jwcheong0420.github.io/tags/eclispe/</loc>
+        <lastmod>2018-06-20T11:00:15.410Z</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.2</priority>
+    </url>
+
+    <url>
+        <loc>http://jwcheong0420.github.io/tags/tomcat/</loc>
+        <lastmod>2018-06-20T11:00:15.410Z</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.2</priority>
     </url>
