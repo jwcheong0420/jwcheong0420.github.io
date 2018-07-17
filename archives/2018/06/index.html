@@ -75,7 +75,7 @@
                                     <a class="main-nav-list-link" href="/">Home</a>
                                 </li>
                             
-                                        <ul class="main-nav-list"><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/linux/">linux</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/review/">review</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/web/">web</a><ul class="main-nav-list-child"><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/web/etc/">etc</a></li></ul></li></ul>
+                                        <ul class="main-nav-list"><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/cloud/">cloud</a><ul class="main-nav-list-child"><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/cloud/aws/">aws</a></li></ul></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/linux/">linux</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/review/">review</a></li><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/web/">web</a><ul class="main-nav-list-child"><li class="main-nav-list-item"><a class="main-nav-list-link" href="/categories/web/etc/">etc</a></li></ul></li></ul>
                                     
                                 <li class="main-nav-list-item" >
                                     <a class="main-nav-list-link" href="/about/index.html">About</a>
@@ -159,6 +159,33 @@
         
         <div class="article-meta">
             <div class="category">
+            <a class="article-category-link" href="/categories/cloud/">cloud</a><i class="icon fa fa-angle-right"></i><a class="article-category-link" href="/categories/cloud/aws/">aws</a>
+            </div>
+            <div class="date"><time datetime="2018-06-26T14:05:00.000Z" itemprop="datePublished">2018-06-26</time></div>
+        </div>
+        
+    
+        <h1 class="article-title" itemprop="name">
+        <a href="/2018/06/26/aws-s3-how-to-put-bucket-cors-by-awscli/">AWS S3에서 bucket의 cors를 활성화하는 방법(awscli 사용)</a>
+        </h1>
+    
+
+        <p class="article-excerpt">
+            회사에서 ceph object storage를 사용 중인데, object 업로드를 위해 frontend단에서 http OPTIONS가 성공하는지를 체크한다고 한다.이 options가 성공하려면 bucket에 대해 cors를 활성화해주어야 하고, 이를 aws cli로 하면 간단하게 성공했지만 java 코드로 성공하기까지 매우 힘들었다.(아직도 의문인 점은, 
+        </p>
+    </div>
+</article>
+    
+
+    
+    
+    
+    
+        <article class="article article-summary">
+    <div class="article-summary-inner">
+        
+        <div class="article-meta">
+            <div class="category">
             <a class="article-category-link" href="/categories/web/">web</a><i class="icon fa fa-angle-right"></i><a class="article-category-link" href="/categories/web/etc/">etc</a>
             </div>
             <div class="date"><time datetime="2018-06-20T09:48:22.000Z" itemprop="datePublished">2018-06-20</time></div>
@@ -219,6 +246,15 @@
                     <li>
                         
                         <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/cloud/">cloud</a><i class="icon fa fa-angle-right"></i><a class="article-category-link" href="/categories/cloud/aws/">aws</a></p>
+                            <p class="item-title"><a href="/2018/06/26/aws-s3-how-to-put-bucket-cors-by-awscli/" class="title">AWS S3에서 bucket의 cors를 활성화하는 방법(awscli 사용)</a></p>
+                            <p class="item-date"><time datetime="2018-06-26T14:05:00.000Z" itemprop="datePublished">2018-06-26</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-inner">
                             <p class="item-category"><a class="article-category-link" href="/categories/web/">web</a><i class="icon fa fa-angle-right"></i><a class="article-category-link" href="/categories/web/etc/">etc</a></p>
                             <p class="item-title"><a href="/2018/06/20/tomcat-same-context-root/" class="title">tomcat에 동일한 context root를 가진 web module 실행 시 발생하는 에러</a></p>
                             <p class="item-date"><time datetime="2018-06-20T09:48:22.000Z" itemprop="datePublished">2018-06-20</time></p>
@@ -252,15 +288,6 @@
                         </div>
                     </li>
                 
-                    <li>
-                        
-                        <div class="item-inner">
-                            <p class="item-category"><a class="article-category-link" href="/categories/linux/">linux</a></p>
-                            <p class="item-title"><a href="/2018/04/28/ubuntu-cron-bash/" class="title">cron에서 bash script 실행시키기</a></p>
-                            <p class="item-date"><time datetime="2018-04-28T06:49:36.000Z" itemprop="datePublished">2018-04-28</time></p>
-                        </div>
-                    </li>
-                
             </ul>
         </div>
     </div>
@@ -270,7 +297,7 @@
     <div class="widget-wrap widget-list">
         <h3 class="widget-title">categories</h3>
         <div class="widget">
-            <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/linux/">linux</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/review/">review</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/web/">web</a><span class="category-list-count">2</span><ul class="category-list-child"><li class="category-list-item"><a class="category-list-link" href="/categories/web/etc/">etc</a><span class="category-list-count">2</span></li></ul></li></ul>
+            <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/cloud/">cloud</a><span class="category-list-count">1</span><ul class="category-list-child"><li class="category-list-item"><a class="category-list-link" href="/categories/cloud/aws/">aws</a><span class="category-list-count">1</span></li></ul></li><li class="category-list-item"><a class="category-list-link" href="/categories/linux/">linux</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/review/">review</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/web/">web</a><span class="category-list-count">2</span><ul class="category-list-child"><li class="category-list-item"><a class="category-list-link" href="/categories/web/etc/">etc</a><span class="category-list-count">2</span></li></ul></li></ul>
         </div>
     </div>
 
@@ -280,7 +307,7 @@
     <div class="widget-wrap widget-float">
         <h3 class="widget-title">tag cloud</h3>
         <div class="widget tagcloud">
-            <a href="/tags/bash/" style="font-size: 10px;">bash</a> <a href="/tags/boogie-board/" style="font-size: 10px;">boogie board</a> <a href="/tags/boogie-board-sync-9-7/" style="font-size: 10px;">boogie board sync 9.7</a> <a href="/tags/cron/" style="font-size: 10px;">cron</a> <a href="/tags/eclispe/" style="font-size: 20px;">eclispe</a> <a href="/tags/hostname/" style="font-size: 10px;">hostname</a> <a href="/tags/shebang/" style="font-size: 10px;">shebang</a> <a href="/tags/shell-script/" style="font-size: 10px;">shell script</a> <a href="/tags/tomcat/" style="font-size: 20px;">tomcat</a> <a href="/tags/ubuntu/" style="font-size: 20px;">ubuntu</a>
+            <a href="/tags/aws/" style="font-size: 10px;">aws</a> <a href="/tags/aws-put-bucket-cors/" style="font-size: 10px;">aws put bucket cors</a> <a href="/tags/awscli/" style="font-size: 10px;">awscli</a> <a href="/tags/bash/" style="font-size: 10px;">bash</a> <a href="/tags/boogie-board/" style="font-size: 10px;">boogie board</a> <a href="/tags/boogie-board-sync-9-7/" style="font-size: 10px;">boogie board sync 9.7</a> <a href="/tags/cors/" style="font-size: 10px;">cors</a> <a href="/tags/cron/" style="font-size: 10px;">cron</a> <a href="/tags/eclispe/" style="font-size: 20px;">eclispe</a> <a href="/tags/hostname/" style="font-size: 10px;">hostname</a> <a href="/tags/s3/" style="font-size: 10px;">s3</a> <a href="/tags/shebang/" style="font-size: 10px;">shebang</a> <a href="/tags/shell-script/" style="font-size: 10px;">shell script</a> <a href="/tags/tomcat/" style="font-size: 20px;">tomcat</a> <a href="/tags/ubuntu/" style="font-size: 20px;">ubuntu</a>
         </div>
     </div>
 

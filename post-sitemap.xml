@@ -7,6 +7,14 @@
     </url>
 
     <url>
+        <loc>http://jwcheong0420.github.io/2018/06/26/aws-s3-how-to-put-bucket-cors-by-awscli/</loc>
+        <lastmod>2018-07-17T13:28:40.923Z</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.6</priority>
+
+    </url>
+
+    <url>
         <loc>http://jwcheong0420.github.io/2018/06/20/tomcat-same-context-root/</loc>
         <lastmod>2018-06-20T11:08:25.687Z</lastmod>
         <changefreq>weekly</changefreq>
