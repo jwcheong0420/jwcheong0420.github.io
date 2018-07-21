@@ -274,14 +274,14 @@ code {
 .logo {
   display: block;
   padding: 10px 0;
-  width: 400px;
-  height: 48px;
+  width: 300px;
+  height: 36px;
   background-image: url("images/logo_generated.png");
   background-position: 0px 10px;
   background-repeat: no-repeat;
-  -webkit-background-size: 400px 48px;
-  -moz-background-size: 400px 48px;
-  background-size: 400px 48px;
+  -webkit-background-size: 300px 36px;
+  -moz-background-size: 300px 36px;
+  background-size: 300px 36px;
 }
 .main-body {
   margin-top: -60px;
@@ -378,7 +378,7 @@ code {
 #header-title .subtitle {
   font-size: 16px;
   font-style: italic;
-  line-height: 58px;
+  line-height: 46px;
   color: rgba(255,255,255,0.7);
   text-shadow: 0 1px rgba(0,0,0,0.2);
 }
@@ -1111,7 +1111,7 @@ a.article-title:hover {
 }
 .article-entry {
   color: #555;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 300;
   line-height: 1.6em;
 }
@@ -1655,11 +1655,11 @@ a.article-title:hover {
   line-height: 22px;
 }
 #footer .logo {
-  width: 320px;
-  height: 38.400000000000006px;
-  -webkit-background-size: 320px 38.400000000000006px;
-  -moz-background-size: 320px 38.400000000000006px;
-  background-size: 320px 38.400000000000006px;
+  width: 240px;
+  height: 28.8px;
+  -webkit-background-size: 240px 28.8px;
+  -moz-background-size: 240px 28.8px;
+  background-size: 240px 28.8px;
 }
 i.icon {
   display: inline-block;
