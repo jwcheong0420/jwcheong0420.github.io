@@ -552,6 +552,140 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://jwcheong0420.github.io/2019/12/19/push-image-to-private-registry/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Joowon Cheong">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="삽질특기생">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          
+            <a href="/2019/12/19/push-image-to-private-registry/" class="post-title-link" itemprop="url">push-image-to-private-registry</a>
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2019-12-19 23:04:46" itemprop="dateCreated datePublished" datetime="2019-12-19T23:04:46+09:00">2019-12-19</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2020-02-15 18:07:36" itemprop="dateModified" datetime="2020-02-15T18:07:36+09:00">2020-02-15</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/cloud/" itemprop="url" rel="index">
+                    <span itemprop="name">cloud</span>
+                  </a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/cloud/docker/" itemprop="url" rel="index">
+                    <span itemprop="name">docker</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h2 id="private-registry-등록하기"><a href="#private-registry-등록하기" class="headerlink" title="private registry 등록하기"></a>private registry 등록하기</h2><h3 id="docker-설정-추가"><a href="#docker-설정-추가" class="headerlink" title="docker 설정 추가"></a>docker 설정 추가</h3><p>/etc/docker/daemon.json에 아래의 내용을 추가</p>
+<pre>
+    <code>
+    vi /etc/docker/daemon.json
+    { "insecure-registries":["192.168.122.57:5000"] }
+    </code>
+</pre>
+
+<h3 id="docker-설정-적용하기"><a href="#docker-설정-적용하기" class="headerlink" title="docker 설정 적용하기"></a>docker 설정 적용하기</h3><pre>
+    <code>
+    systemctl restart docker
+    </code>
+</pre>
+
+
+<h2 id="이미지-준비"><a href="#이미지-준비" class="headerlink" title="이미지 준비"></a>이미지 준비</h2><h3 id="원하는-이미지를-docker-hub에서-받아오기"><a href="#원하는-이미지를-docker-hub에서-받아오기" class="headerlink" title="원하는 이미지를 docker hub에서 받아오기"></a>원하는 이미지를 docker hub에서 받아오기</h3><p>docker pull {name}:{tag}</p>
+<pre>
+    <code>
+    docker pull nvidia/k8s-device-plugin:1.0.0-beta4
+    </code>
+</pre>
+
+<h3 id="tar로-존재하던-이미지를-load하기"><a href="#tar로-존재하던-이미지를-load하기" class="headerlink" title="tar로 존재하던 이미지를 load하기"></a>tar로 존재하던 이미지를 load하기</h3><p>docker load -i {tar file name}</p>
+<pre>
+    <code>
+    docker load -i k8s-device-plugin.tar
+    </code>
+</pre>
+
+<h2 id="이미지-push"><a href="#이미지-push" class="headerlink" title="이미지 push"></a>이미지 push</h2><h3 id="image-이름을-변경하기"><a href="#image-이름을-변경하기" class="headerlink" title="image 이름을 변경하기"></a>image 이름을 변경하기</h3><p>docker tag {name}:{tag} {private registry ip}:{port}/{name}:{tag}</p>
+<pre>
+    <code>
+    docker tag nvidia/k8s-device-plugin:1.0.0-beta4 192.168.122.57:5000/k8s-device-plugin:1.0.0-beta4
+    </code>
+</pre>
+
+<h3 id="image-업로드하기"><a href="#image-업로드하기" class="headerlink" title="image 업로드하기"></a>image 업로드하기</h3><p>docker push {바꾼 이미지 이름}</p>
+<pre>
+    <code>
+    docker push 192.168.122.57:5000/k8s-device-plugin:1.0.0-beta4
+    </code>
+</pre>
+
+<h2 id="결과-확인"><a href="#결과-확인" class="headerlink" title="결과 확인"></a>결과 확인</h2><h3 id="registry에서-이미지-리스트-확인하기"><a href="#registry에서-이미지-리스트-확인하기" class="headerlink" title="registry에서 이미지 리스트 확인하기"></a>registry에서 이미지 리스트 확인하기</h3><pre>
+    <code>
+    curl -X GET 172.21.3.6:5000/v2/_catalog
+    </code>
+</pre>
+
+<h3 id="registry에서-이미지-tag-확인하기"><a href="#registry에서-이미지-tag-확인하기" class="headerlink" title="registry에서 이미지 tag 확인하기"></a>registry에서 이미지 tag 확인하기</h3><pre>
+    <code>
+    curl -X GET 172.21.3.6:5000/v2/k8s-device-plugin/tags/list
+    </code>
+</pre>
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="en">
     <link itemprop="mainEntityOfPage" href="http://jwcheong0420.github.io/2018/09/04/cloud-init-and-metadata-service/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1383,20 +1517,20 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">9</span>
+          <span class="site-state-item-count">10</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
             <a href="/categories/">
           
-        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-count">7</span>
         <span class="site-state-item-name">categories</span></a>
       </div>
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">23</span>
+        <span class="site-state-item-count">27</span>
         <span class="site-state-item-name">tags</span></a>
       </div>
   </nav>
