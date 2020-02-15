@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"jwcheong0420.github.io","root":"/","scheme":"Muse","version":"7.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="회사에서 ceph object storage를 사용 중인데, object 업로드를 위해 frontend단에서 http OPTIONS가 성공하는지를 체크한다고 한다.이 options가 성공하려면 bucket에 대해 cors를 활성화해주어야 하고, 이를 aws cli로 하면 간단하게 성공했지만 java 코드로 성공하기까지 매우 힘들었다.(아직도 의문인 점은,">
+<meta property="og:type" content="article">
+<meta property="og:title" content="AWS S3에서 bucket의 cors를 활성화하는 방법(awscli 사용)">
+<meta property="og:url" content="http://jwcheong0420.github.io/2018/06/26/aws-s3-how-to-put-bucket-cors-by-awscli/index.html">
+<meta property="og:site_name" content="삽질특기생">
+<meta property="og:description" content="회사에서 ceph object storage를 사용 중인데, object 업로드를 위해 frontend단에서 http OPTIONS가 성공하는지를 체크한다고 한다.이 options가 성공하려면 bucket에 대해 cors를 활성화해주어야 하고, 이를 aws cli로 하면 간단하게 성공했지만 java 코드로 성공하기까지 매우 힘들었다.(아직도 의문인 점은,">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2018-06-26T14:05:00.000Z">
+<meta property="article:modified_time" content="2020-02-13T17:04:13.249Z">
+<meta property="article:author" content="Joowon Cheong">
+<meta property="article:tag" content="aws">
+<meta property="article:tag" content="s3">
+<meta property="article:tag" content="cors">
+<meta property="article:tag" content="awscli">
+<meta property="article:tag" content="aws put bucket cors">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://jwcheong0420.github.io/2018/06/26/aws-s3-how-to-put-bucket-cors-by-awscli/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true
+  };
+</script>
+
+  <title>AWS S3에서 bucket의 cors를 활성화하는 방법(awscli 사용) | 삽질특기생</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">삽질특기생</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">다음에 삽질 덜하려고 만든 불친절한 블로그</p>
+  </div>
+
+  <div class="site-nav-right"></div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>Archives</a>
+
+  </li>
+  </ul>
+
+</nav>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="en">
+    <link itemprop="mainEntityOfPage" href="http://jwcheong0420.github.io/2018/06/26/aws-s3-how-to-put-bucket-cors-by-awscli/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Joowon Cheong">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="삽질특기생">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          AWS S3에서 bucket의 cors를 활성화하는 방법(awscli 사용)
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2018-06-26 23:05:00" itemprop="dateCreated datePublished" datetime="2018-06-26T23:05:00+09:00">2018-06-26</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2020-02-14 02:04:13" itemprop="dateModified" datetime="2020-02-14T02:04:13+09:00">2020-02-14</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/cloud/" itemprop="url" rel="index">
+                    <span itemprop="name">cloud</span>
+                  </a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/cloud/aws/" itemprop="url" rel="index">
+                    <span itemprop="name">aws</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>회사에서 ceph object storage를 사용 중인데, object 업로드를 위해 frontend단에서 http OPTIONS가 성공하는지를 체크한다고 한다.<br>이 options가 성공하려면 bucket에 대해 cors를 활성화해주어야 하고, 이를 aws cli로 하면 간단하게 성공했지만 java 코드로 성공하기까지 매우 힘들었다.<br>(아직도 의문인 점은, 굳이 cors를 활성화하지 않아도 object 업로드는 된다는 점이다. options만 실패할 뿐…)<br>aws cli로 시도했을 때 –debug로 나온 결과가 실제 aws 가이드와 약간 다르기도 했고, aws signature 버전이 올라가면서 authorization을 생성하는 과정이 매우매우 복잡해졌기 때문이었다.<br>혹시나 이것 때문에 골치 아플 미래의 분을 위해 내가 며칠 동안 조사하고 테스트한 내용을 기록해두고자 한다.</p>
+<p>우선 이번 포스팅에서는 aws s3, object storage, bucket, cors 등등의 개념을 간단간단하게 설명하고,<br>put bucket cors를 awscli로 하는 방법에 대해 설명하도록 하겠다.<br>원래는 AWSv4 Authorization 생성 방법까지 다루려 했는데, 쓰다보니 너무 길어져서 이건 다음에 포스팅해야겠다.</p>
+<h2 id="AWS-S3란"><a href="#AWS-S3란" class="headerlink" title="AWS S3란"></a>AWS S3란</h2><p>AWS(Amazon Web Service)에서 제공하는 Object Storage로, Simple Storage Service를 줄여 S3 서비스라고 한다.<br>Object Storage는 rest api를 사용하여 object를 key-value로 관리하는 저장소라고 생각하면 된다.<br>Amazon에서는 S3에 대해 rest api와 각종 sdk, command line으로 조작하는 aws cli도 제공하고 있다.<br>sdk는 내부적으로 rest api를 사용하므로 다를 바가 없고, cli도 –debug로 확인해보면 별반 다르지 않음을 알 수 있다.<br>그러니까 결론은 편의성을 위해 여러 방법이 제공되지만 모든 조작은 rest api로 가능하다는 것이다.</p>
+<h3 id="Bucket이란"><a href="#Bucket이란" class="headerlink" title="Bucket이란"></a>Bucket이란</h3><p>AWS S3의 경우 user당 object storage가 만들어지고, 각 object storage당 access key와 secret key가 발급된다.<br>이 때 두 key는 각각 id와 pw격으로 사용되며, aws authorization string을 생성할 때 필요하다.<br>Object storage를 생성했다고 해서 바로 object를 업로드할 수 있는 건 아니다.<br>물론 object storage는 원래 object를 flat하게 관리하지만, aws에는 bucket이라는 layer가 있다.<br>즉, object storage에 여러 개의 bucket을 만들고, 이 bucket에 object에 업로드하는 구조이다.</p>
+<h3 id="CORS란"><a href="#CORS란" class="headerlink" title="CORS란"></a>CORS란</h3><p>CORS(Cross-Origin Resource Sharing)은 다른 도메인에 있는 서버의 url을 호출할 수 있도록 접근을 허용하는 것이다.<br>그러니까 cors를 설정하지 않았다면 원래는 같은 도메인에서만 접근이 가능하고, 다른 도메인에 접근하려면 보안 이슈가 발생하는 것이다.<br>aws의 경우 bucket에 대해 cors 활성화를 해주어야 다른 도메인에서도 접근할 수 있다.</p>
+<h2 id="Put-bucket-cors-방법"><a href="#Put-bucket-cors-방법" class="headerlink" title="Put bucket cors 방법"></a>Put bucket cors 방법</h2><h3 id="AWS-cli를-사용하는-방법"><a href="#AWS-cli를-사용하는-방법" class="headerlink" title="AWS cli를 사용하는 방법"></a>AWS cli를 사용하는 방법</h3><ol>
+<li><p>aws cli를 설치한다.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ apt-get install --no-install-recommends awscli</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>access key와 secret key를 설정한다.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">$ aws configure</span><br><span class="line">AWS Access Key ID [None]: <span class="variable">$&#123;access-key&#125;</span></span><br><span class="line">AWS Secret Access Key [None]: <span class="variable">$&#123;secret-key&#125;</span></span><br><span class="line">Default region name [None]:</span><br><span class="line">Default output format [None]: json</span><br></pre></td></tr></table></figure>
+<p>region은 설정 안해도 된다. aws configure 상에서는 공란으로 되어있지만, 실제 authorization 생성 시 default는 us-east-1로 사용한다.<br>output format은 자유.</p>
+</li>
+<li><p>bucket을 생성한다.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ aws s3api create-bucket --endpoint-url <span class="variable">$&#123;endpoint-url&#125;</span> --bucket testbucket</span><br></pre></td></tr></table></figure>
+<p>endpoint-url은 ceph의 object storage gateway ip를 적으면 된다.<br>이걸 생략할 경우 s3.amazonaws.com으로 rest api를 전송한다.<br>아 물론 region이 설정되어있을 경우 url이 달라질 수 있다.</p>
+</li>
+<li><p>cors rule 지정</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">$ vi cors.json</span><br><span class="line">&#123;</span><br><span class="line"><span class="string">"CORSRules"</span>: [</span><br><span class="line">   &#123;</span><br><span class="line">     <span class="string">"AllowedOrigins"</span>: [<span class="string">"*"</span>],</span><br><span class="line">     <span class="string">"AllowedHeaders"</span>: [<span class="string">"*"</span>],</span><br><span class="line">     <span class="string">"AllowedMethods"</span>: [<span class="string">"PUT"</span>, <span class="string">"GET"</span>, <span class="string">"DELETE"</span>],</span><br><span class="line">     <span class="string">"MaxAgeSeconds"</span>: 3000,</span><br><span class="line">     <span class="string">"ExposeHeaders"</span>: [<span class="string">"x-amz-server-side-encryption"</span>]</span><br><span class="line">   &#125;</span><br><span class="line">]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>PUT, GET, DELETE method에 대해 활성화해놓도록 지정하였다.<br>object는 multipart upload가 아닌 이상 post를 사용하지 않기 때문이다.</p>
+</li>
+<li><p>testbucket의 cors를 활성화시킨다.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ aws s3api put-bucket-cors --bucket testbucket --cors-configuration file://cors.json --endpoint-url <span class="variable">$&#123;endpoint-url&#125;</span></span><br></pre></td></tr></table></figure>
+<p>이제 testbucket에 object를 업로드하고, 업데이트하고, 다운로드하고, 삭제할 수 있다.</p>
+</li>
+</ol>
+<p>AWSv4 Authorization 생성하는 방법과 이걸로 http request를 날려서 bucket cors를 활성화하는 방법은 다음 포스팅에…!<br>To be Continued…</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/aws/" rel="tag"># aws</a>
+              <a href="/tags/s3/" rel="tag"># s3</a>
+              <a href="/tags/cors/" rel="tag"># cors</a>
+              <a href="/tags/awscli/" rel="tag"># awscli</a>
+              <a href="/tags/aws-put-bucket-cors/" rel="tag"># aws put bucket cors</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2018/06/20/tomcat-same-context-root/" rel="prev" title="tomcat에 동일한 context root를 가진 web module 실행 시 발생하는 에러">
+      <i class="fa fa-chevron-left"></i> tomcat에 동일한 context root를 가진 web module 실행 시 발생하는 에러
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2018/08/09/how-to-install-k8s/" rel="next" title="k8s 설치 방법">
+      k8s 설치 방법 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let activeClass = CONFIG.comments.activeClass;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#AWS-S3란"><span class="nav-number">1.</span> <span class="nav-text">AWS S3란</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Bucket이란"><span class="nav-number">1.1.</span> <span class="nav-text">Bucket이란</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#CORS란"><span class="nav-number">1.2.</span> <span class="nav-text">CORS란</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Put-bucket-cors-방법"><span class="nav-number">2.</span> <span class="nav-text">Put bucket cors 방법</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#AWS-cli를-사용하는-방법"><span class="nav-number">2.1.</span> <span class="nav-text">AWS cli를 사용하는 방법</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">Joowon Cheong</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">8</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">categories</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">22</span>
+        <span class="site-state-item-name">tags</span>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Joowon Cheong</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> v4.2.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">Theme – <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a> v7.7.1
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
