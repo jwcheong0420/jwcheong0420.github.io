@@ -31,8 +31,8 @@
 <meta property="article:published_time" content="2018-08-09T09:38:15.000Z">
 <meta property="article:modified_time" content="2020-02-15T02:18:22.101Z">
 <meta property="article:author" content="Joowon Cheong">
-<meta property="article:tag" content="k8s">
 <meta property="article:tag" content="kubernetes">
+<meta property="article:tag" content="k8s">
 <meta name="twitter:card" content="summary">
 
 <link rel="canonical" href="http://jwcheong0420.github.io/2018/08/09/how-to-install-k8s/">
@@ -217,7 +217,7 @@
       
         <p>k8s의 pod에 대해 조사를 해야하는 일이 생겨서 개인 컴퓨터에 k8s를 설치해보았다.<br>원래 k8s는 세 대 이상의 클러스터에 구성할 것을 권장하는 것으로 알고 있지만 나는 테스트용이므로 한 대로만 구성하였다.<br>k8s가 무엇인지 간략하게 알아보고, 설치 과정에 대해 기술하도록 하겠다.</p>
 <h2 id="kubernetes란"><a href="#kubernetes란" class="headerlink" title="kubernetes란"></a>kubernetes란</h2><p>kubernete(k8s)는 docker orchetration tool로, application container의 deploy, scaling, operating 자동화를 위한 플랫폼이다.<br>쉽게 설명하자면 k8s는 사용자가 기대하는 상태로 동작하도록 application을 생성하고 실행 상태를 유지하는 것이 목적이라고 할 수 있다.<br>k8s는 여러 노드를 하나의 클러스터로 관리하는데, 하나의 master node와 그 외 여러 일반 node로 구성된다. 일반 node는 minions라고도 불리는 모양이다.(미니언즈라니…귀여워…)<br>master node에는 클러스터를 관리하는 목적의 controller pod들이 실행되어야 한다.<br>일반 node들은 kubelet 데몬과 docker 데몬이 실행되고 있어야 하며, container의 묶음인 pod들이 실행되는 형태이다.</p>
-<h2 id="k8s-설치-방법"><a href="#k8s-설치-방법" class="headerlink" title="k8s 설치 방법"></a>k8s 설치 방법</h2><h3 id="docker-설치"><a href="#docker-설치" class="headerlink" title="docker 설치"></a>docker 설치</h3><p>우선 k8s가 docker 기반의 container를 관리하므로, docker를 설치해야한다.<br>나는 이미 설치되어있어서 해당 과정을 생략했는데, <a href="https://docs.docker.com/install/linux/docker-ce/ubuntu/#install-using-the-repository" target="_blank" rel="noopener">docker 공식 홈페이지의 설치 방법</a>을 참고하여 설치하면 된다.</p>
+<h2 id="k8s-설치-방법"><a href="#k8s-설치-방법" class="headerlink" title="k8s 설치 방법"></a>k8s 설치 방법</h2><h3 id="docker-설치"><a href="#docker-설치" class="headerlink" title="docker 설치"></a>docker 설치</h3><p>우선 k8s가 docker 기반의 container를 관리하므로, docker를 설치해야한다.<br>나는 이미 설치되어있어서 해당 과정을 생략했는데, <span class="exturl" data-url="aHR0cHM6Ly9kb2NzLmRvY2tlci5jb20vaW5zdGFsbC9saW51eC9kb2NrZXItY2UvdWJ1bnR1LyNpbnN0YWxsLXVzaW5nLXRoZS1yZXBvc2l0b3J5" title="https://docs.docker.com/install/linux/docker-ce/ubuntu/#install-using-the-repository">docker 공식 홈페이지의 설치 방법<i class="fa fa-external-link"></i></span>을 참고하여 설치하면 된다.</p>
 <h3 id="k8s-설치"><a href="#k8s-설치" class="headerlink" title="k8s 설치"></a>k8s 설치</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">$ curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add</span><br><span class="line">$ vi /etc/apt/sources.list.d/kubernetes.list</span><br><span class="line">deb http://apt.kubernetes.io/ kubernetes-xenial main</span><br><span class="line">$ apt-get update</span><br><span class="line">$ apt-get install --no-install-recommends kubelet kubeadm kubernetes-cni</span><br></pre></td></tr></table></figure>
 <p>패키지 설치 시 –no-install-recommends 옵션은 해당 패지키가 실행되는 데 필요한 패키지만을 설치하겠다는 옵션이다.<br>잡다한 패키지까지 설치하는 게 싫어서 나는 항상 이 옵션을 주고 설치하는데, 저 옵션 없이 설치해도 무방하다.</p>
 <h3 id="kubelet-설정"><a href="#kubelet-설정" class="headerlink" title="kubelet 설정"></a>kubelet 설정</h3><p>swap 설정을 해주어야 한다.</p>
@@ -239,7 +239,7 @@
 <blockquote>
 <p>Ready            False   Tue, 15 May 2018 10:35:18 +0900   Tue, 15 May 2018 10:26:25 +0900   KubeletNotReady              runtime network not ready: NetworkReady=false reason:NetworkPluginNotReady message:docker: network plugin is not ready: cni config uninitialized</p>
 </blockquote>
-<p>/etc/systemd/system/10-kubeadm.conf에서 KUBELET_NETWORK_ARGS line을 삭제했더니 정상 동작하였다.<br>해당 과정은 <a href="https://github.com/kubernetes/kubernetes/issues/48798" target="_blank" rel="noopener">kubernetes github</a>을 참고하였다.</p>
+<p>/etc/systemd/system/10-kubeadm.conf에서 KUBELET_NETWORK_ARGS line을 삭제했더니 정상 동작하였다.<br>해당 과정은 <span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL2t1YmVybmV0ZXMva3ViZXJuZXRlcy9pc3N1ZXMvNDg3OTg=" title="https://github.com/kubernetes/kubernetes/issues/48798">kubernetes github<i class="fa fa-external-link"></i></span>을 참고하였다.</p>
 <h3 id="swap-에러-발생"><a href="#swap-에러-발생" class="headerlink" title="swap 에러 발생"></a>swap 에러 발생</h3><p>master init 과정에서 다음 커맨드를 실행했을 때 swap을 disable하지 않았다며 에러가 발생했다.</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ kubeadm init</span><br></pre></td></tr></table></figure>
 <blockquote>
@@ -256,8 +256,8 @@
 
       <footer class="post-footer">
           <div class="post-tags">
-              <a href="/tags/k8s/" rel="tag"># k8s</a>
               <a href="/tags/kubernetes/" rel="tag"># kubernetes</a>
+              <a href="/tags/k8s/" rel="tag"># k8s</a>
           </div>
 
         
@@ -346,7 +346,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">11</span>
+          <span class="site-state-item-count">12</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
@@ -359,7 +359,7 @@
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">28</span>
+        <span class="site-state-item-count">31</span>
         <span class="site-state-item-name">tags</span></a>
       </div>
   </nav>

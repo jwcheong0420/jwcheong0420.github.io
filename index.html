@@ -155,6 +155,256 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://jwcheong0420.github.io/2020/02/13/using-sysctls-in-k8s/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Joowon Cheong">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="삽질특기생">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2020/02/13/using-sysctls-in-k8s/" class="post-title-link" itemprop="url">Kubernetes에서 sysctls 설정 변경하는 방법(feat. proc & sysctl)</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2020-02-13 21:55:30" itemprop="dateCreated datePublished" datetime="2020-02-13T21:55:30+09:00">2020-02-13</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/cloud/" itemprop="url" rel="index">
+                    <span itemprop="name">cloud</span>
+                  </a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/cloud/k8s/" itemprop="url" rel="index">
+                    <span itemprop="name">k8s</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p>proc file system과 sysctl command, ipc namespace 분리 테스트까지</p>
+<h2 id="proc-file-system과-sysctl-command"><a href="#proc-file-system과-sysctl-command" class="headerlink" title="proc file system과 sysctl command"></a>proc file system과 sysctl command</h2><h3 id="proc-file-system"><a href="#proc-file-system" class="headerlink" title="proc file system"></a>proc file system</h3><h4 id="proc-file-system이란"><a href="#proc-file-system이란" class="headerlink" title="proc file system이란"></a>proc file system이란</h4><ul>
+<li>Unix 계열 OS에서 프로세스와 다른 시스템 정보를 계층적인 파일 구조 같은 형식으로 보여주는 pseudo filesystem</li>
+<li>부트 타임에 /proc이라는 마운트 포인트에 매핑</li>
+<li>커널에서 내부 데이터 구조체에 대한 인터페이스처럼 행동<ul>
+<li>커널 영역과 사용자 영역 사이의 통신에 대한 방식 제공</li>
+</ul>
+</li>
+<li>런타임(sysctl) 시에 특정한 커널 파라미터를 바꾸고 시스템에 대한 정보를 얻는데 사용될 수 있음</li>
+</ul>
+<h4 id="proc-하위-구조"><a href="#proc-하위-구조" class="headerlink" title="/proc 하위 구조"></a>/proc 하위 구조</h4><ul>
+<li>/proc/{PID}<ul>
+<li>(커널 프로세스를 포함하는) 실행 중인 프로세스 별로 디렉토리가 존재</li>
+</ul>
+</li>
+<li>/proc/crypto<ul>
+<li>사용 가능한 암호화 모듈들에 대한 목록</li>
+</ul>
+</li>
+<li>/proc/devices<ul>
+<li>장치 ID에 의해 정렬된 캐릭터와 블록 장치 뿐 아니라 /dev 이름에 대한 목록</li>
+</ul>
+</li>
+<li>/proc/filesystems<ul>
+<li>리스팅 시의 커널에 의해 지원되는 파일 시스템들의 목록</li>
+</ul>
+</li>
+<li>/proc/sys<ul>
+<li>동적으로 설정 가능한 커널 옵션들에 대한 인터페이스</li>
+</ul>
+</li>
+<li>(생략)</li>
+</ul>
+<h4 id="왜-proc-file-system을-사용하는가"><a href="#왜-proc-file-system을-사용하는가" class="headerlink" title="왜 proc file system을 사용하는가?"></a>왜 proc file system을 사용하는가?</h4><ul>
+<li>파일 시스템 오버 헤드를 줄일 수 있음<ul>
+<li>일반적인 파일시스템은 오버헤드가 많다<ul>
+<li>각 파일의 inode, superblocks와 같은 객체를 관리해야 함</li>
+<li>이런 정보를 필요할 때마다 OS에 요청해야 함</li>
+<li>이런 정보들은 서로 어긋날 수도 있고, 단편화 현상이 발생할 수도 있음</li>
+</ul>
+</li>
+<li>procfs은 리눅스 커널에서 직접 파일시스템을 관리하는 방법을 채택</li>
+<li>procfs은 커널메모리에서 돌아가는 가상 파일 시스템</li>
+</ul>
+</li>
+<li>물리적인 파일시스템 장치를 필요로 하지 않음<ul>
+<li>커널 메모리에서 유지하는 파일 시스템</li>
+</ul>
+</li>
+<li>최적화된 파일 작업 수행<ul>
+<li>proc 하위 파일들은 고정적이고 처리해야할 데이터 양이 적으므로, open/read/write/close 등을 사용하여 데이터를 다루는 것이 비효율적</li>
+</ul>
+</li>
+</ul>
+<h4 id="proc-프로그래밍"><a href="#proc-프로그래밍" class="headerlink" title="proc 프로그래밍"></a>proc 프로그래밍</h4><h5 id="user와-데이터-교환법"><a href="#user와-데이터-교환법" class="headerlink" title="user와 데이터 교환법"></a>user와 데이터 교환법</h5><ul>
+<li>procfs의 데이터는 파일에 저장되는 것이 아니라 커널 메모리에 저장하며, 커널 메모리는 유저레벨에서 직접 접근 불가능<ul>
+<li>user가 cat(혹은 read 함수)를 통해 파일의 내용을 읽으려하면, 커널에서 데이터를 유저에게 일정한 포맷으로 뿌려줌</li>
+<li>user가 어떤 내용을 proc 파일에 쓰게되면 데이터를 받아들이고 가공해서 커널 메모리에 로드</li>
+</ul>
+</li>
+<li>kernel와 user 사이에 데이터를 전달해주는 callback 함수를 등록시켜서 사용  <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"># pric_dir_entry에 <span class="built_in">read</span>/<span class="built_in">write</span>를 위한 callback 함수를 등록</span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">proc_dir_entry</span> *<span class="title">entry</span>;</span></span><br><span class="line"></span><br><span class="line">entry-&gt;read_proc = read_proc_foo;</span><br><span class="line">entry-&gt;write_proc = write_proc_foo;</span><br></pre></td></tr></table></figure>
+
+</li>
+</ul>
+<h4 id="proc-file-system-소스-코드"><a href="#proc-file-system-소스-코드" class="headerlink" title="proc file system 소스 코드"></a>proc file system 소스 코드</h4><ul>
+<li><span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL3RvcnZhbGRzL2xpbnV4L3RyZWUvbWFzdGVyL2ZzL3Byb2M=" title="https://github.com/torvalds/linux/tree/master/fs/proc">https://github.com/torvalds/linux/tree/master/fs/proc<i class="fa fa-external-link"></i></span></li>
+</ul>
+<h3 id="sysctl-command"><a href="#sysctl-command" class="headerlink" title="sysctl command"></a>sysctl command</h3><ul>
+<li>동작<ul>
+<li>동적으로 커널 파라미터를 설정</li>
+<li>/proc/sys 하위에 있는 파라미터만 가능</li>
+</ul>
+</li>
+<li>사용법<ul>
+<li>sysctl -w {param}=”{value}”<ul>
+<li>일시적으로 해당 파라미터를 설정</li>
+<li>재부팅 시 유지되지 않음</li>
+</ul>
+</li>
+<li>sysctl -p{file_path}<ul>
+<li>file_path로부터 sysctl 설정을 로드</li>
+<li>file_path가 주어지지 않으면 /etc/sysctl.conf을 로드</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>참고<ul>
+<li>부팅 시점에 /proc mount 후 sysctl에 의해 /etc/sysctl.conf가 자동으로 로드됨</li>
+</ul>
+</li>
+</ul>
+<h2 id="K8S에서의-sysctl-설정-방법"><a href="#K8S에서의-sysctl-설정-방법" class="headerlink" title="K8S에서의 sysctl 설정 방법"></a>K8S에서의 sysctl 설정 방법</h2><ul>
+<li>K8S에서 커널 파라미터 변경을 위해 sysctls spec을 설정할 수 있음</li>
+<li>sysctls<ul>
+<li>safe와 unsafe 파라미터를 구분하여 관리</li>
+<li>safe 파라미터는 default로 enable<ul>
+<li>kernel.shm_rmid_forced</li>
+<li>net.ipv4.ip_local_port_range</li>
+<li>net.ipv4.tcp_syncookies</li>
+</ul>
+</li>
+<li>unsafe 파라미터는 cluster admin을 통해 node별로 enable해야 함<ul>
+<li>disabled unsafe sysctls를 사용한 pod은 스케줄링까지는 되지만, launch는 실패</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>unsafe sysctls를 enable하는 방법<ul>
+<li>node별로 kubelet에 다음과 같은 설정을 추가하여 기동  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubelet --allowed-unsafe-sysctls ‘&#123;원하는 kernel 파라미터&#125;’ ...</span><br></pre></td></tr></table></figure>
+
+
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="테스트"><a href="#테스트" class="headerlink" title="테스트"></a>테스트</h2><h3 id="테스트-환경"><a href="#테스트-환경" class="headerlink" title="테스트 환경"></a>테스트 환경</h3><p><img src="/images/using-sysctls-in-k8s/test-cluster.png" alt="test한 cluster 정보"></p>
+<h3 id="테스트-과정"><a href="#테스트-과정" class="headerlink" title="테스트 과정"></a>테스트 과정</h3><ul>
+<li><p>enable되지 않은 unsafe 파라미터를 수정하는 pod deploy</p>
+  <figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Pod</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line"><span class="attr">name:</span> <span class="string">joo-modify-sysctl</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line"><span class="attr">securityContext:</span></span><br><span class="line">    <span class="attr">sysctls:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">kernel.sem</span></span><br><span class="line">    <span class="attr">value:</span> <span class="string">"10000   1024000000      500     32000"</span></span><br><span class="line"><span class="attr">containers:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">nginx</span></span><br><span class="line">    <span class="attr">image:</span> <span class="string">nginx</span></span><br><span class="line">    <span class="attr">ports:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">containerPort:</span> <span class="number">80</span></span><br><span class="line">        <span class="attr">name:</span> <span class="string">http</span></span><br></pre></td></tr></table></figure>
+
+  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">root@K8S-3-1:~/joo$ k apply -f sysctl_test.yaml</span><br><span class="line">pod/joo-modify-sysctl created</span><br></pre></td></tr></table></figure>
+<p>  <img src="/images/using-sysctls-in-k8s/failed-default.png" alt="sysctl 변경 실패 - SysctlForbidden"><br>  <img src="/images/using-sysctls-in-k8s/failed-default-describe.png" alt="sysctl 변경 실패 - SysctlForbidden"></p>
+</li>
+<li><p>kubelet config에 sysctl unsafe parameter 활성화</p>
+<ul>
+<li>kubelet 설정에 –allowed-unsafe-sysctls ‘kernel.sem’ 추가  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">root@K8S-3-5:~$ vi /etc/systemd/system/kubelet.service.d/10-kubeadm.conf</span><br></pre></td></tr></table></figure>
+  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Note: This dropin only works with kubeadm and kubelet v1.11+</span></span><br><span class="line">[Service]</span><br><span class="line">Environment=<span class="string">"KUBELET_KUBECONFIG_ARGS=--bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf --kubeconfig=/etc/kubernetes/kubelet.conf"</span></span><br><span class="line">Environment=<span class="string">"KUBELET_CONFIG_ARGS=--config=/var/lib/kubelet/config.yaml"</span></span><br><span class="line">Environment=<span class="string">"KUBELET_EXTRA_ARGS=--feature-gates=DevicePlugins=true --allowed-unsafe-sysctls 'kernel.sem'"</span></span><br><span class="line"><span class="comment"># This is a file that "kubeadm init" and "kubeadm join" generates at runtime, populating the KUBELET_KUBEADM_ARGS variable dynamically</span></span><br><span class="line">EnvironmentFile=-/var/lib/kubelet/kubeadm-flags.env</span><br><span class="line"><span class="comment"># This is a file that the user can use for overrides of the kubelet args as a last resort. Preferably, the user should use</span></span><br><span class="line"><span class="comment"># the .NodeRegistration.KubeletExtraArgs object in the configuration files instead. KUBELET_EXTRA_ARGS should be sourced from this file.</span></span><br><span class="line">EnvironmentFile=-/etc/default/kubelet</span><br><span class="line">ExecStart=</span><br><span class="line">ExecStart=/usr/bin/kubelet <span class="variable">$KUBELET_KUBECONFIG_ARGS</span> <span class="variable">$KUBELET_CONFIG_ARGS</span> <span class="variable">$KUBELET_KUBEADM_ARGS</span> <span class="variable">$KUBELET_EXTRA_ARGS</span></span><br></pre></td></tr></table></figure></li>
+<li>설정 reload  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">root@K8S-3-5:~$ systemctl daemon-reload</span><br></pre></td></tr></table></figure></li>
+<li>kubelet restart  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">root@K8S-3-5:~$ systemctl restart kubelet</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+</li>
+<li><p>pod 다시 deploy</p>
+<ul>
+<li>deploy 성공  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">root@K8S-3-1:~/joo$ k get pods -o wide</span><br><span class="line">NAME                                   READY     STATUS              RESTARTS   AGE       IP                NODE      NOMINATED NODE   READINESS GATES</span><br><span class="line">joo-modify-sysctl                      0/1       ContainerCreating   0          2s        &lt;none&gt;            k8s-3-5   &lt;none&gt;           &lt;none&gt;</span><br></pre></td></tr></table></figure></li>
+<li>kernel.sem 비교  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">root@K8S-3-1:~$ cat /proc/sys/kernel/sem</span><br><span class="line">32000   1024000000      500     32000</span><br><span class="line">root@K8S-3-1:~$ k <span class="built_in">exec</span> -it joo-modify-sysctl /bin/bash</span><br><span class="line">root@joo-modify-sysctl:/$ cat /proc/sys/kernel/sem</span><br><span class="line">10000   1024000000      500     32000</span><br></pre></td></tr></table></figure>
+
+
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="kernel-sem-기본값-확인"><a href="#kernel-sem-기본값-확인" class="headerlink" title="kernel.sem 기본값 확인"></a>kernel.sem 기본값 확인</h2><ul>
+<li>kernel src :  <span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL3RvcnZhbGRzL2xpbnV4L2Jsb2IvdjQuMTUvaW5jbHVkZS91YXBpL2xpbnV4L3NlbS5oI0w3OQ==" title="https://github.com/torvalds/linux/blob/v4.15/include/uapi/linux/sem.h#L79">https://github.com/torvalds/linux/blob/v4.15/include/uapi/linux/sem.h#L79<i class="fa fa-external-link"></i></span><br>  <img src="/images/using-sysctls-in-k8s/kernel-sem-default-value.png" alt="kernel.sem default value"></li>
+<li>cat /proc/sys/kernel/sem<br>  <img src="/images/using-sysctls-in-k8s/proc-sys-kernel-sem.png" alt="/proc/sys/kernel/sem"><ul>
+<li>SEMMSL: max semaphores per array</li>
+<li>SEMMNS: maximum semaphores system-wide</li>
+<li>SEMOPM : maximum operations per semop call</li>
+<li>SEMMNI: maximum arrays</li>
+</ul>
+</li>
+</ul>
+<h2 id="IPC-namespace-분리-시-kernel-sem-값-확인"><a href="#IPC-namespace-분리-시-kernel-sem-값-확인" class="headerlink" title="IPC namespace 분리 시 kernel.sem 값 확인"></a>IPC namespace 분리 시 kernel.sem 값 확인</h2><p>kernel.sem parameter는 IPC namespace가 분리되면 host와 다른 값(default 값)을 가짐<br>parameter별로 어떤 namespace에 의해 분리되는지는 다름</p>
+<h3 id="테스트-과정-1"><a href="#테스트-과정-1" class="headerlink" title="테스트 과정"></a>테스트 과정</h3><ul>
+<li>default kernel.sem 확인<ul>
+<li>cat /proc/sys/kernel/sem</li>
+</ul>
+</li>
+<li>sysctl로 kernel.sem 변경<ul>
+<li>sysctl -w kernel.sem=”33000   1024000000 500 32000”</li>
+</ul>
+</li>
+<li>host ipc namespace에서의 kernel.sem을 출력하고, 새로운 ipc ns를 갖는 자식 process를 생성하여 kernel.sem을 출력하는 프로그램 실행<br>  <img src="/images/using-sysctls-in-k8s/ipc-ns-test.png" alt="ipc namespace 분리 시 kernel.sem 값 확인"></li>
+<li>a.out 소스  <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">define</span> _GNU_SOURCE</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdlib.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sched.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;signal.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sys/types.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sys/wait.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">char</span> child_stack[<span class="number">1048576</span>];</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">int</span> <span class="title">child_fn</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="built_in">printf</span>(<span class="string">"at child - new ipc ns\n"</span>);</span><br><span class="line">        system(<span class="string">"cat /proc/sys/kernel/sem"</span>);</span><br><span class="line">        <span class="built_in">printf</span>(<span class="string">"\n\n"</span>);</span><br><span class="line">        <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="built_in">printf</span>(<span class="string">"at parent - host ipc ns\n"</span>);</span><br><span class="line">        system(<span class="string">"cat /proc/sys/kernel/sem"</span>);</span><br><span class="line">        <span class="built_in">printf</span>(<span class="string">"\n\n"</span>);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        <span class="keyword">pid_t</span> child_pid = clone(child_fn, child_stack+<span class="number">1048576</span>, CLONE_NEWIPC | SIGCHLD, <span class="literal">NULL</span>);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        waitpid(child_pid, <span class="literal">NULL</span>, <span class="number">0</span>);</span><br><span class="line">        <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+</li>
+</ul>
+<h2 id="참고-링크"><a href="#참고-링크" class="headerlink" title="참고 링크"></a>참고 링크</h2><ul>
+<li><span class="exturl" data-url="aHR0cHM6Ly9lbi53aWtpcGVkaWEub3JnL3dpa2kvUHJvY2Zz" title="https://en.wikipedia.org/wiki/Procfs">https://en.wikipedia.org/wiki/Procfs<i class="fa fa-external-link"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly93d3cudGxkcC5vcmcvTERQL0xpbnV4LUZpbGVzeXN0ZW0tSGllcmFyY2h5L2h0bWwvcHJvYy5odG1s" title="https://www.tldp.org/LDP/Linux-Filesystem-Hierarchy/html/proc.html">https://www.tldp.org/LDP/Linux-Filesystem-Hierarchy/html/proc.html<i class="fa fa-external-link"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly93d3cuam9pbmMuY28ua3Ivdy9TaXRlL3N5c3RlbV9wcm9ncmFtaW5nL3Byb2MvUHJvY0ZzUHJvZ3JhbWluZw==" title="https://www.joinc.co.kr/w/Site/system_programing/proc/ProcFsPrograming">https://www.joinc.co.kr/w/Site/system_programing/proc/ProcFsPrograming<i class="fa fa-external-link"></i></span></li>
+<li><span class="exturl" data-url="aHR0cDovL2pha2UuZG90aG9tZS5jby5rci9wcm9jLw==" title="http://jake.dothome.co.kr/proc/">http://jake.dothome.co.kr/proc/<i class="fa fa-external-link"></i></span></li>
+<li><span class="exturl" data-url="aHR0cDovL21hbjcub3JnL2xpbnV4L21hbi1wYWdlcy9tYW4yL3N5c2N0bC4yLmh0bWw=" title="http://man7.org/linux/man-pages/man2/sysctl.2.html">http://man7.org/linux/man-pages/man2/sysctl.2.html<i class="fa fa-external-link"></i></span></li>
+<li><span class="exturl" data-url="aHR0cDovL21hbjcub3JnL2xpbnV4L21hbi1wYWdlcy9tYW44L3N5c2N0bC44Lmh0bWw=" title="http://man7.org/linux/man-pages/man8/sysctl.8.html">http://man7.org/linux/man-pages/man8/sysctl.8.html<i class="fa fa-external-link"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly93d3cudG9wdGFsLmNvbS9saW51eC9zZXBhcmF0aW9uLWFueGlldHktaXNvbGF0aW5nLXlvdXItc3lzdGVtLXdpdGgtbGludXgtbmFtZXNwYWNlcw==" title="https://www.toptal.com/linux/separation-anxiety-isolating-your-system-with-linux-namespaces">https://www.toptal.com/linux/separation-anxiety-isolating-your-system-with-linux-namespaces<i class="fa fa-external-link"></i></span></li>
+</ul>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="en">
     <link itemprop="mainEntityOfPage" href="http://jwcheong0420.github.io/2020/02/11/cgroup-v2/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -450,13 +700,13 @@
 </li>
 <li>low-level container runtimes<ul>
 <li>runc<ul>
-<li>최초 지원 시작(2019/09, <a href="https://github.com/opencontainers/runc/pull/2113" target="_blank" rel="noopener">https://github.com/opencontainers/runc/pull/2113</a>)</li>
+<li>최초 지원 시작(2019/09, <span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL29wZW5jb250YWluZXJzL3J1bmMvcHVsbC8yMTEz" title="https://github.com/opencontainers/runc/pull/2113">https://github.com/opencontainers/runc/pull/2113<i class="fa fa-external-link"></i></span>)</li>
 <li>여러 문제로 아직 정식으로 지원하지는 않음<ul>
 <li><img src="/images/cgroup-v2/runc-cgroup2.png" alt="runc not support cgroup v2 yet"></li>
 </ul>
 </li>
 <li>Issue Tracking<ul>
-<li><a href="https://github.com/opencontainers/runc/issues?utf8=%E2%9C%93&amp;q=is%3Aissue+is%3Aopen+cgroup2" target="_blank" rel="noopener">https://github.com/opencontainers/runc/issues?utf8=%E2%9C%93&amp;q=is%3Aissue+is%3Aopen+cgroup2</a></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL29wZW5jb250YWluZXJzL3J1bmMvaXNzdWVzP3V0Zjg9JUUyJTlDJTkzJmFtcDtxPWlzJTNBaXNzdWUraXMlM0FvcGVuK2Nncm91cDI=" title="https://github.com/opencontainers/runc/issues?utf8=%E2%9C%93&amp;q=is%3Aissue+is%3Aopen+cgroup2">https://github.com/opencontainers/runc/issues?utf8=%E2%9C%93&amp;q=is%3Aissue+is%3Aopen+cgroup2<i class="fa fa-external-link"></i></span></li>
 </ul>
 </li>
 </ul>
@@ -469,9 +719,9 @@
 </li>
 <li>lxc<ul>
 <li>merge된 PR들이 보이긴 하는데…?<ul>
-<li><a href="https://github.com/lxc/lxc/pull/2897" target="_blank" rel="noopener">https://github.com/lxc/lxc/pull/2897</a></li>
-<li><a href="https://github.com/lxc/lxc/pull/3120" target="_blank" rel="noopener">https://github.com/lxc/lxc/pull/3120</a></li>
-<li><a href="https://github.com/lxc/lxc/pull/3194" target="_blank" rel="noopener">https://github.com/lxc/lxc/pull/3194</a></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL2x4Yy9seGMvcHVsbC8yODk3" title="https://github.com/lxc/lxc/pull/2897">https://github.com/lxc/lxc/pull/2897<i class="fa fa-external-link"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL2x4Yy9seGMvcHVsbC8zMTIw" title="https://github.com/lxc/lxc/pull/3120">https://github.com/lxc/lxc/pull/3120<i class="fa fa-external-link"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL2x4Yy9seGMvcHVsbC8zMTk0" title="https://github.com/lxc/lxc/pull/3194">https://github.com/lxc/lxc/pull/3194<i class="fa fa-external-link"></i></span></li>
 </ul>
 </li>
 </ul>
@@ -481,22 +731,22 @@
 <li>high-level container runtimes<ul>
 <li>containerd<ul>
 <li>Merged<ul>
-<li><a href="https://github.com/containerd/containerd/pull/3799" target="_blank" rel="noopener">https://github.com/containerd/containerd/pull/3799</a></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL2NvbnRhaW5lcmQvY29udGFpbmVyZC9wdWxsLzM3OTk=" title="https://github.com/containerd/containerd/pull/3799">https://github.com/containerd/containerd/pull/3799<i class="fa fa-external-link"></i></span></li>
 </ul>
 </li>
 <li>Tracking Issue<ul>
-<li><a href="https://github.com/containerd/containerd/issues/3726" target="_blank" rel="noopener">https://github.com/containerd/containerd/issues/3726</a></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL2NvbnRhaW5lcmQvY29udGFpbmVyZC9pc3N1ZXMvMzcyNg==" title="https://github.com/containerd/containerd/issues/3726">https://github.com/containerd/containerd/issues/3726<i class="fa fa-external-link"></i></span></li>
 </ul>
 </li>
 </ul>
 </li>
 <li>Docker / Moby<ul>
 <li>Merged<ul>
-<li><a href="https://github.com/moby/moby/pull/40174" target="_blank" rel="noopener">https://github.com/moby/moby/pull/40174</a></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL21vYnkvbW9ieS9wdWxsLzQwMTc0" title="https://github.com/moby/moby/pull/40174">https://github.com/moby/moby/pull/40174<i class="fa fa-external-link"></i></span></li>
 </ul>
 </li>
 <li>Tracking Issue<ul>
-<li><a href="https://github.com/moby/moby/issues/40360" target="_blank" rel="noopener">https://github.com/moby/moby/issues/40360</a></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL21vYnkvbW9ieS9pc3N1ZXMvNDAzNjA=" title="https://github.com/moby/moby/issues/40360">https://github.com/moby/moby/issues/40360<i class="fa fa-external-link"></i></span></li>
 </ul>
 </li>
 </ul>
@@ -511,7 +761,7 @@
 </li>
 <li>Kubernetes<ul>
 <li>KEP(Kubernetes Enhancement Proposal) 추가를 위한 PR opened<ul>
-<li><a href="https://github.com/kubernetes/enhancements/pull/1370" target="_blank" rel="noopener">https://github.com/kubernetes/enhancements/pull/1370</a></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL2t1YmVybmV0ZXMvZW5oYW5jZW1lbnRzL3B1bGwvMTM3MA==" title="https://github.com/kubernetes/enhancements/pull/1370">https://github.com/kubernetes/enhancements/pull/1370<i class="fa fa-external-link"></i></span></li>
 </ul>
 </li>
 <li>alpha version 2020</li>
@@ -520,14 +770,14 @@
 </li>
 </ul>
 <h2 id="참고-링크"><a href="#참고-링크" class="headerlink" title="참고 링크"></a>참고 링크</h2><ul>
-<li><a href="http://man7.org/linux/man-pages/man7/cgroups.7.html" target="_blank" rel="noopener">http://man7.org/linux/man-pages/man7/cgroups.7.html</a></li>
-<li><a href="https://www.kernel.org/doc/Documentation/cgroup-v2.txt" target="_blank" rel="noopener">https://www.kernel.org/doc/Documentation/cgroup-v2.txt</a></li>
-<li><a href="https://www.kernel.org/doc/Documentation/cgroup-v1/cgroups.txt" target="_blank" rel="noopener">https://www.kernel.org/doc/Documentation/cgroup-v1/cgroups.txt</a></li>
-<li><a href="https://www.redhat.com/en/blog/world-domination-cgroups-rhel-8-welcome-cgroups-v2" target="_blank" rel="noopener">https://www.redhat.com/en/blog/world-domination-cgroups-rhel-8-welcome-cgroups-v2</a></li>
-<li><a href="http://www.man7.org/conf/lca2019/cgroups_v2-LCA2019-Kerrisk.pdf" target="_blank" rel="noopener">http://www.man7.org/conf/lca2019/cgroups_v2-LCA2019-Kerrisk.pdf</a></li>
-<li><a href="https://medium.com/nttlabs/cgroup-v2-596d035be4d7" target="_blank" rel="noopener">https://medium.com/nttlabs/cgroup-v2-596d035be4d7</a></li>
-<li><a href="https://serverfault.com/questions/929080/list-of-controllers-empty-with-cgroup-v2" target="_blank" rel="noopener">https://serverfault.com/questions/929080/list-of-controllers-empty-with-cgroup-v2</a></li>
-<li><a href="https://github.com/opencontainers/runc#releases" target="_blank" rel="noopener">https://github.com/opencontainers/runc#releases</a></li>
+<li><span class="exturl" data-url="aHR0cDovL21hbjcub3JnL2xpbnV4L21hbi1wYWdlcy9tYW43L2Nncm91cHMuNy5odG1s" title="http://man7.org/linux/man-pages/man7/cgroups.7.html">http://man7.org/linux/man-pages/man7/cgroups.7.html<i class="fa fa-external-link"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly93d3cua2VybmVsLm9yZy9kb2MvRG9jdW1lbnRhdGlvbi9jZ3JvdXAtdjIudHh0" title="https://www.kernel.org/doc/Documentation/cgroup-v2.txt">https://www.kernel.org/doc/Documentation/cgroup-v2.txt<i class="fa fa-external-link"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly93d3cua2VybmVsLm9yZy9kb2MvRG9jdW1lbnRhdGlvbi9jZ3JvdXAtdjEvY2dyb3Vwcy50eHQ=" title="https://www.kernel.org/doc/Documentation/cgroup-v1/cgroups.txt">https://www.kernel.org/doc/Documentation/cgroup-v1/cgroups.txt<i class="fa fa-external-link"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly93d3cucmVkaGF0LmNvbS9lbi9ibG9nL3dvcmxkLWRvbWluYXRpb24tY2dyb3Vwcy1yaGVsLTgtd2VsY29tZS1jZ3JvdXBzLXYy" title="https://www.redhat.com/en/blog/world-domination-cgroups-rhel-8-welcome-cgroups-v2">https://www.redhat.com/en/blog/world-domination-cgroups-rhel-8-welcome-cgroups-v2<i class="fa fa-external-link"></i></span></li>
+<li><span class="exturl" data-url="aHR0cDovL3d3dy5tYW43Lm9yZy9jb25mL2xjYTIwMTkvY2dyb3Vwc192Mi1MQ0EyMDE5LUtlcnJpc2sucGRm" title="http://www.man7.org/conf/lca2019/cgroups_v2-LCA2019-Kerrisk.pdf">http://www.man7.org/conf/lca2019/cgroups_v2-LCA2019-Kerrisk.pdf<i class="fa fa-external-link"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9tZWRpdW0uY29tL250dGxhYnMvY2dyb3VwLXYyLTU5NmQwMzViZTRkNw==" title="https://medium.com/nttlabs/cgroup-v2-596d035be4d7">https://medium.com/nttlabs/cgroup-v2-596d035be4d7<i class="fa fa-external-link"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9zZXJ2ZXJmYXVsdC5jb20vcXVlc3Rpb25zLzkyOTA4MC9saXN0LW9mLWNvbnRyb2xsZXJzLWVtcHR5LXdpdGgtY2dyb3VwLXYy" title="https://serverfault.com/questions/929080/list-of-controllers-empty-with-cgroup-v2">https://serverfault.com/questions/929080/list-of-controllers-empty-with-cgroup-v2<i class="fa fa-external-link"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL29wZW5jb250YWluZXJzL3J1bmMjcmVsZWFzZXM=" title="https://github.com/opencontainers/runc#releases">https://github.com/opencontainers/runc#releases<i class="fa fa-external-link"></i></span></li>
 </ul>
 
       
@@ -604,7 +854,7 @@
 
       
           <h2 id="kubernetes는-swap을-사용하지-않는-것을-권장한다"><a href="#kubernetes는-swap을-사용하지-않는-것을-권장한다" class="headerlink" title="kubernetes는 swap을 사용하지 않는 것을 권장한다"></a>kubernetes는 swap을 사용하지 않는 것을 권장한다</h2><ul>
-<li><a href="https://www.evernote.com/l/AWjKo9GOS9pFFp7JEYCZkBXiRvpQe6W3jtw/" target="_blank" rel="noopener">이러한 이유들 때문인데…</a><ul>
+<li><span class="exturl" data-url="aHR0cHM6Ly93d3cuZXZlcm5vdGUuY29tL2wvQVdqS285R09TOXBGRnA3SkVZQ1prQlhpUnZwUWU2VzNqdHcv" title="https://www.evernote.com/l/AWjKo9GOS9pFFp7JEYCZkBXiRvpQe6W3jtw/">이러한 이유들 때문인데…<i class="fa fa-external-link"></i></span><ul>
 <li>요약하자면, <strong>QoS 개념과 상충</strong>될 뿐더러 swap을 지원하려면 고려해야할 게 많으므로 당장은 생각하지 않겠다는 입장</li>
 </ul>
 </li>
@@ -653,7 +903,7 @@
 <li>옵션 사용 시 경고 문구로 deprecated되었다고 나오지만 아직 동작함</li>
 </ul>
 </li>
-<li>–fail-swap-on이 true인 경우, /proc/swaps를 읽어서 swap 여부 확인 (<a href="https://github.com/kubernetes/kubernetes/blob/33aa665c344f91c10a15f0efda730e171b544d96/pkg/kubelet/cm/container_manager_linux.go#L209" target="_blank" rel="noopener">소스코드</a>)<ul>
+<li>–fail-swap-on이 true인 경우, /proc/swaps를 읽어서 swap 여부 확인 (<span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL2t1YmVybmV0ZXMva3ViZXJuZXRlcy9ibG9iLzMzYWE2NjVjMzQ0ZjkxYzEwYTE1ZjBlZmRhNzMwZTE3MWI1NDRkOTYvcGtnL2t1YmVsZXQvY20vY29udGFpbmVyX21hbmFnZXJfbGludXguZ28jTDIwOQ==" title="https://github.com/kubernetes/kubernetes/blob/33aa665c344f91c10a15f0efda730e171b544d96/pkg/kubelet/cm/container_manager_linux.go#L209">소스코드<i class="fa fa-external-link"></i></span>)<ul>
 <li><img src="/images/enabling-swap-in-k8s/kubelet-src-check-swap.png" alt="swap check하는 부분"><ul>
 <li>swap을 사용할 경우, /proc/swaps에서 두 번째 줄이 존재함<br>  <img src="/images/enabling-swap-in-k8s/proc-swaps-using-swap.png" alt="swap 사용 시"></li>
 <li>swap을 사용하지 않는 경우, 두 번째 줄은 존재하지 않음<br>  <img src="/images/enabling-swap-in-k8s/proc-swaps-not-using-swap.png" alt="swap 미사용 시"></li>
@@ -867,7 +1117,7 @@
 <h4 id="instance-초기화-진행"><a href="#instance-초기화-진행" class="headerlink" title="instance 초기화 진행"></a>instance 초기화 진행</h4><p>이제 얻어온 datasource를 바탕으로 instance를 초기화한다.</p>
 <p>이와 같은 과정을 거쳐 cloud-init은 vm을 personalize한다.<br>이제 cloud-init을 설명하면서 여러 차례 언급되었던 metadata service에 대해 알아보자.</p>
 <h2 id="metadata-service"><a href="#metadata-service" class="headerlink" title="metadata service"></a>metadata service</h2><p>metadata service는 instance를 관리하는 데에 필요한 정보를 검색하는 서비스이다.<br>cloud-init이 이 서비스를 instance를 초기화할 때 사용하는 대표적인 예일 뿐, 사용자도 해당 서비스를 사용하여 instance의 metadata를 조회할 수 있다.</p>
-<h3 id="metadata-service-사용-방법"><a href="#metadata-service-사용-방법" class="headerlink" title="metadata service 사용 방법"></a>metadata service 사용 방법</h3><p>이 서비스는 rest api로 제공되는데, cloud platform별로 사용 방법이 다르다.<br><img src="/images/cloud-init-and-metadata-service/metadata-svc.png" alt=""><br>openstack의 경우 metadata를 파일로 한 번에 리턴해주지만, 대부분의 플랫폼은 metadata 항목마다 request를 보내어 그 값을 리턴받는다.<br>사용 방법은 각 공홈에 나와있는데, 대표적으로 <a href="https://docs.aws.amazon.com/ko_kr/AWSEC2/latest/UserGuide/ec2-instance-metadata.html" target="_blank" rel="noopener">ec2의 metadata service 사용방법</a>을 읽어보면 감이 올 것이다.<br>여기에서 내가 궁금했던 것이 두 가지 있는데, 첫 번째는 openstack와 ec2의 metadata service는 왜 169.254.169.254를 사용하는가?였다.<br>이것은 GCE와 Aliyun은 저 ip를 사용하지 않는다는 것을 몰랐을 때 생긴 궁금증이라, 저 ip에 꽂혀서 삽질했던 지난 날을 생각하면… (부들부들)<br>그리고 두 번째는 이 http request에는 instance에 대한 아무런 정보도 없는데 metadata service가 이 instance specific한 어떻게 돌려주는가?였다.<br>우선 두 번째 의문부터 풀어보도록 하자.</p>
+<h3 id="metadata-service-사용-방법"><a href="#metadata-service-사용-방법" class="headerlink" title="metadata service 사용 방법"></a>metadata service 사용 방법</h3><p>이 서비스는 rest api로 제공되는데, cloud platform별로 사용 방법이 다르다.<br><img src="/images/cloud-init-and-metadata-service/metadata-svc.png" alt=""><br>openstack의 경우 metadata를 파일로 한 번에 리턴해주지만, 대부분의 플랫폼은 metadata 항목마다 request를 보내어 그 값을 리턴받는다.<br>사용 방법은 각 공홈에 나와있는데, 대표적으로 <span class="exturl" data-url="aHR0cHM6Ly9kb2NzLmF3cy5hbWF6b24uY29tL2tvX2tyL0FXU0VDMi9sYXRlc3QvVXNlckd1aWRlL2VjMi1pbnN0YW5jZS1tZXRhZGF0YS5odG1s" title="https://docs.aws.amazon.com/ko_kr/AWSEC2/latest/UserGuide/ec2-instance-metadata.html">ec2의 metadata service 사용방법<i class="fa fa-external-link"></i></span>을 읽어보면 감이 올 것이다.<br>여기에서 내가 궁금했던 것이 두 가지 있는데, 첫 번째는 openstack와 ec2의 metadata service는 왜 169.254.169.254를 사용하는가?였다.<br>이것은 GCE와 Aliyun은 저 ip를 사용하지 않는다는 것을 몰랐을 때 생긴 궁금증이라, 저 ip에 꽂혀서 삽질했던 지난 날을 생각하면… (부들부들)<br>그리고 두 번째는 이 http request에는 instance에 대한 아무런 정보도 없는데 metadata service가 이 instance specific한 어떻게 돌려주는가?였다.<br>우선 두 번째 의문부터 풀어보도록 하자.</p>
 <h3 id="openstack의-metadata-service-동작-과정"><a href="#openstack의-metadata-service-동작-과정" class="headerlink" title="openstack의 metadata service 동작 과정"></a>openstack의 metadata service 동작 과정</h3><p>instance를 특정짓는 과정을 알아보기 위해서는 metadata service가 어떤 방식으로 돌아가는 지 알 필요가 있다.<br>모든 플랫폼을 다 살펴볼 순 없으므로 openstack을 기준으로 조사를 했다.</p>
 
       
@@ -945,7 +1195,7 @@
       
           <p>k8s의 pod에 대해 조사를 해야하는 일이 생겨서 개인 컴퓨터에 k8s를 설치해보았다.<br>원래 k8s는 세 대 이상의 클러스터에 구성할 것을 권장하는 것으로 알고 있지만 나는 테스트용이므로 한 대로만 구성하였다.<br>k8s가 무엇인지 간략하게 알아보고, 설치 과정에 대해 기술하도록 하겠다.</p>
 <h2 id="kubernetes란"><a href="#kubernetes란" class="headerlink" title="kubernetes란"></a>kubernetes란</h2><p>kubernete(k8s)는 docker orchetration tool로, application container의 deploy, scaling, operating 자동화를 위한 플랫폼이다.<br>쉽게 설명하자면 k8s는 사용자가 기대하는 상태로 동작하도록 application을 생성하고 실행 상태를 유지하는 것이 목적이라고 할 수 있다.<br>k8s는 여러 노드를 하나의 클러스터로 관리하는데, 하나의 master node와 그 외 여러 일반 node로 구성된다. 일반 node는 minions라고도 불리는 모양이다.(미니언즈라니…귀여워…)<br>master node에는 클러스터를 관리하는 목적의 controller pod들이 실행되어야 한다.<br>일반 node들은 kubelet 데몬과 docker 데몬이 실행되고 있어야 하며, container의 묶음인 pod들이 실행되는 형태이다.</p>
-<h2 id="k8s-설치-방법"><a href="#k8s-설치-방법" class="headerlink" title="k8s 설치 방법"></a>k8s 설치 방법</h2><h3 id="docker-설치"><a href="#docker-설치" class="headerlink" title="docker 설치"></a>docker 설치</h3><p>우선 k8s가 docker 기반의 container를 관리하므로, docker를 설치해야한다.<br>나는 이미 설치되어있어서 해당 과정을 생략했는데, <a href="https://docs.docker.com/install/linux/docker-ce/ubuntu/#install-using-the-repository" target="_blank" rel="noopener">docker 공식 홈페이지의 설치 방법</a>을 참고하여 설치하면 된다.</p>
+<h2 id="k8s-설치-방법"><a href="#k8s-설치-방법" class="headerlink" title="k8s 설치 방법"></a>k8s 설치 방법</h2><h3 id="docker-설치"><a href="#docker-설치" class="headerlink" title="docker 설치"></a>docker 설치</h3><p>우선 k8s가 docker 기반의 container를 관리하므로, docker를 설치해야한다.<br>나는 이미 설치되어있어서 해당 과정을 생략했는데, <span class="exturl" data-url="aHR0cHM6Ly9kb2NzLmRvY2tlci5jb20vaW5zdGFsbC9saW51eC9kb2NrZXItY2UvdWJ1bnR1LyNpbnN0YWxsLXVzaW5nLXRoZS1yZXBvc2l0b3J5" title="https://docs.docker.com/install/linux/docker-ce/ubuntu/#install-using-the-repository">docker 공식 홈페이지의 설치 방법<i class="fa fa-external-link"></i></span>을 참고하여 설치하면 된다.</p>
 <h3 id="k8s-설치"><a href="#k8s-설치" class="headerlink" title="k8s 설치"></a>k8s 설치</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">$ curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add</span><br><span class="line">$ vi /etc/apt/sources.list.d/kubernetes.list</span><br><span class="line">deb http://apt.kubernetes.io/ kubernetes-xenial main</span><br><span class="line">$ apt-get update</span><br><span class="line">$ apt-get install --no-install-recommends kubelet kubeadm kubernetes-cni</span><br></pre></td></tr></table></figure>
 <p>패키지 설치 시 –no-install-recommends 옵션은 해당 패지키가 실행되는 데 필요한 패키지만을 설치하겠다는 옵션이다.<br>잡다한 패키지까지 설치하는 게 싫어서 나는 항상 이 옵션을 주고 설치하는데, 저 옵션 없이 설치해도 무방하다.</p>
 <h3 id="kubelet-설정"><a href="#kubelet-설정" class="headerlink" title="kubelet 설정"></a>kubelet 설정</h3><p>swap 설정을 해주어야 한다.</p>
@@ -967,7 +1217,7 @@
 <blockquote>
 <p>Ready            False   Tue, 15 May 2018 10:35:18 +0900   Tue, 15 May 2018 10:26:25 +0900   KubeletNotReady              runtime network not ready: NetworkReady=false reason:NetworkPluginNotReady message:docker: network plugin is not ready: cni config uninitialized</p>
 </blockquote>
-<p>/etc/systemd/system/10-kubeadm.conf에서 KUBELET_NETWORK_ARGS line을 삭제했더니 정상 동작하였다.<br>해당 과정은 <a href="https://github.com/kubernetes/kubernetes/issues/48798" target="_blank" rel="noopener">kubernetes github</a>을 참고하였다.</p>
+<p>/etc/systemd/system/10-kubeadm.conf에서 KUBELET_NETWORK_ARGS line을 삭제했더니 정상 동작하였다.<br>해당 과정은 <span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL2t1YmVybmV0ZXMva3ViZXJuZXRlcy9pc3N1ZXMvNDg3OTg=" title="https://github.com/kubernetes/kubernetes/issues/48798">kubernetes github<i class="fa fa-external-link"></i></span>을 참고하였다.</p>
 <h3 id="swap-에러-발생"><a href="#swap-에러-발생" class="headerlink" title="swap 에러 발생"></a>swap 에러 발생</h3><p>master init 과정에서 다음 커맨드를 실행했을 때 swap을 disable하지 않았다며 에러가 발생했다.</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ kubeadm init</span><br></pre></td></tr></table></figure>
 <blockquote>
@@ -1315,87 +1565,8 @@
 <h2 id="해결-방법"><a href="#해결-방법" class="headerlink" title="해결 방법"></a>해결 방법</h2><p>Eclipse에서 server를 더블 클릭하면 server overview가 나온다.<br><img src="/images/tomcat-not-working-in-eclipse/server_overview_default.png" alt="" title="default server setting in Eclipse"></p>
 <p>이 때 다음 항목을 변경해야 한다.(HTTP 포트 번호는 굳이 변경하지 않아도 된다.)<br><img src="/images/tomcat-not-working-in-eclipse/change_server_setting.png" alt="" title="change server setting"><br>server path를 실제 Tomcat이 설치된 경로로 사용하라고 Use Tomcat installation으로 변경하고,<br>deploy path를 실제 Tomcat이 설치된 경로의 webapps 디렉토리로 변경한다.</p>
 <p>저장한 뒤 다시 start하면 다음과 같이 예쁘게 tomcat 페이지가 로드된다.<br><img src="/images/tomcat-not-working-in-eclipse/tomcat_success.png" alt="" title="tomcat works in eclipse"></p>
-<h2 id="참고-사이트"><a href="#참고-사이트" class="headerlink" title="참고 사이트"></a>참고 사이트</h2><p><a href="https://stackoverflow.com/questions/20235909/tomcat-is-not-working-in-eclipse" target="_blank" rel="noopener">https://stackoverflow.com/questions/20235909/tomcat-is-not-working-in-eclipse</a></p>
+<h2 id="참고-사이트"><a href="#참고-사이트" class="headerlink" title="참고 사이트"></a>참고 사이트</h2><p><span class="exturl" data-url="aHR0cHM6Ly9zdGFja292ZXJmbG93LmNvbS9xdWVzdGlvbnMvMjAyMzU5MDkvdG9tY2F0LWlzLW5vdC13b3JraW5nLWluLWVjbGlwc2U=" title="https://stackoverflow.com/questions/20235909/tomcat-is-not-working-in-eclipse">https://stackoverflow.com/questions/20235909/tomcat-is-not-working-in-eclipse<i class="fa fa-external-link"></i></span></p>
 
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="en">
-    <link itemprop="mainEntityOfPage" href="http://jwcheong0420.github.io/2018/05/07/ubuntu-unable-to-resolve-host/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Joowon Cheong">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="삽질특기생">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2018/05/07/ubuntu-unable-to-resolve-host/" class="post-title-link" itemprop="url">unable to resolve host 에러 해결 방법</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2018-05-07 23:55:14" itemprop="dateCreated datePublished" datetime="2018-05-07T23:55:14+09:00">2018-05-07</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/linux/" itemprop="url" rel="index">
-                    <span itemprop="name">linux</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>ubuntu에서 sudo를 사용할 때마다 다음과 같은 문구가 뜨는 경우가 있다.</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo: unable to resolve host</span><br></pre></td></tr></table></figure>
-<p>명령을 실행하는 데에 문제가 되는 것 같지는 않지만 매우 거슬리므로 해결해보도록 하자.</p>
-<h2 id="hostname"><a href="#hostname" class="headerlink" title="hostname"></a>hostname</h2><p>hostname은 네트워크에 연결된 장치에 부여되는 고유한 이름이다.</p>
-<p>ubuntu desktop 버전을 설치할 때 user를 생성하다보면 계정명과 pc이름처럼 이상한 것이 결합되어 길게 hostname이 붙곤 한다.<br>이 hostname은 terminal의 명령행에 계속 노출되므로 길면 거슬리기 마련이라, 필자는 보통 dev로 변경하는 편이다.</p>
-<h2 id="etc-hostname과-etc-hosts"><a href="#etc-hostname과-etc-hosts" class="headerlink" title="/etc/hostname과 /etc/hosts"></a>/etc/hostname과 /etc/hosts</h2><p>ubuntu의 hostname을 변경하려면 총 두 개의 파일을 수정해야한다.<br>결론부터 말하자면 unable to resolve host 문구가 출력되었던 이유는 이 두 파일의 내용이 달랐기 때문이었다.</p>
-<p>에러가 발생하는 상황에서 두 파일을 비교해보면 다음과 같다.</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">$ cat /etc/hostname</span><br><span class="line">dev</span><br><span class="line">$ cat /etc/hosts</span><br><span class="line">127.0.0.1   localhost</span><br><span class="line">127.0.1.1   jwcheong-15U530-GH5HK</span><br><span class="line"><span class="comment">#(이하 생략)</span></span><br></pre></td></tr></table></figure>
-
-<p>/etc/hostname에는 dev라고 나와있는 반면, /etc/hosts에는 변경 전의 hostname이 쓰여있었다.<br>예전에 hostname을 바꿀 때 /etc/hostname만 변경한 모양이다.<br><del>계정 생성 단계에서 바꿨으면 쉬웠 읍읍</del></p>
-<p>/etc/hosts에서 예전 hostname을 지우고 현재 hostname으로 변경해주면 더 이상 문구가 출력되지 않는다.</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">$ vi /etc/hosts</span><br><span class="line">127.0.0.1   localhost</span><br><span class="line">127.0.1.1   dev</span><br><span class="line"><span class="comment">#(이하 생략)</span></span><br></pre></td></tr></table></figure>
       
     </div>
 
@@ -1480,7 +1651,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">11</span>
+          <span class="site-state-item-count">12</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
@@ -1493,7 +1664,7 @@
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">28</span>
+        <span class="site-state-item-count">31</span>
         <span class="site-state-item-name">tags</span></a>
       </div>
   </nav>
