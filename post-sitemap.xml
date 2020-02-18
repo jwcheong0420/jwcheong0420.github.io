@@ -9,7 +9,15 @@
 
     <url>
         <loc>http://jwcheong0420.github.io/2020/02/13/using-sysctls-in-k8s/</loc>
-        <lastmod>2020-02-16T16:48:45.133Z</lastmod>
+        <lastmod>2020-02-18T11:23:39.566Z</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.6</priority>
+
+    </url>
+
+    <url>
+        <loc>http://jwcheong0420.github.io/2018/09/04/cloud-init-and-metadata-service/</loc>
+        <lastmod>2020-02-18T11:19:22.982Z</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.6</priority>
 
@@ -74,14 +82,6 @@
     <url>
         <loc>http://jwcheong0420.github.io/2018/06/26/aws-s3-how-to-put-bucket-cors-by-awscli/</loc>
         <lastmod>2020-02-15T08:28:25.211Z</lastmod>
-        <changefreq>weekly</changefreq>
-        <priority>0.6</priority>
-
-    </url>
-
-    <url>
-        <loc>http://jwcheong0420.github.io/2018/09/04/cloud-init-and-metadata-service/</loc>
-        <lastmod>2020-02-15T08:26:33.604Z</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.6</priority>
 
