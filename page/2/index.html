@@ -155,6 +155,91 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://jwcheong0420.github.io/2018/05/09/tomcat-not-working-in-eclipse/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Joowon Cheong">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="삽질특기생">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2018/05/09/tomcat-not-working-in-eclipse/" class="post-title-link" itemprop="url">tomcat이 eclispe에서 동작하지 않을 때</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2018-05-09 22:46:16" itemprop="dateCreated datePublished" datetime="2018-05-09T22:46:16+09:00">2018-05-09</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/web/" itemprop="url" rel="index">
+                    <span itemprop="name">web</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h2 id="환경-구성"><a href="#환경-구성" class="headerlink" title="환경 구성"></a>환경 구성</h2><ul>
+<li>JDK 8<ul>
+<li>9는 지원이 끊겼고, 10으로 했을 때 eclipse 실행 시 에러가 발생했기 때문에 안전하게 8로 설치함</li>
+<li>oracle 계정이 있으면 9를 설치할 수 있는 모양인데, 굳이…</li>
+</ul>
+</li>
+<li>Eclispe EE oxygen</li>
+<li>Tomcat 8.5.31</li>
+</ul>
+<h2 id="에러-내용"><a href="#에러-내용" class="headerlink" title="에러 내용"></a>에러 내용</h2><p>Tomcat을 단독으로 실행했을 때는 localhost:8081에 페이지가 정상적으로 로드되었는데,<br>Eclispe에 server로 tomcat을 추가하여 실행하면 자꾸 다음과 같은 에러가 발생했다.<br><img src="/images/tomcat-not-working-in-eclipse/tomcat_404_in_eclipse.png" alt="" title="tomcat 404 in eclipse"></p>
+<blockquote>
+<p>The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.</p>
+</blockquote>
+<h2 id="해결-방법"><a href="#해결-방법" class="headerlink" title="해결 방법"></a>해결 방법</h2><p>Eclipse에서 server를 더블 클릭하면 server overview가 나온다.<br><img src="/images/tomcat-not-working-in-eclipse/server_overview_default.png" alt="" title="default server setting in Eclipse"></p>
+<p>이 때 다음 항목을 변경해야 한다.(HTTP 포트 번호는 굳이 변경하지 않아도 된다.)<br><img src="/images/tomcat-not-working-in-eclipse/change_server_setting.png" alt="" title="change server setting"><br>server path를 실제 Tomcat이 설치된 경로로 사용하라고 Use Tomcat installation으로 변경하고,<br>deploy path를 실제 Tomcat이 설치된 경로의 webapps 디렉토리로 변경한다.</p>
+<p>저장한 뒤 다시 start하면 다음과 같이 예쁘게 tomcat 페이지가 로드된다.<br><img src="/images/tomcat-not-working-in-eclipse/tomcat_success.png" alt="" title="tomcat works in eclipse"></p>
+<h2 id="참고-사이트"><a href="#참고-사이트" class="headerlink" title="참고 사이트"></a>참고 사이트</h2><p><span class="exturl" data-url="aHR0cHM6Ly9zdGFja292ZXJmbG93LmNvbS9xdWVzdGlvbnMvMjAyMzU5MDkvdG9tY2F0LWlzLW5vdC13b3JraW5nLWluLWVjbGlwc2U=" title="https://stackoverflow.com/questions/20235909/tomcat-is-not-working-in-eclipse">https://stackoverflow.com/questions/20235909/tomcat-is-not-working-in-eclipse<i class="fa fa-external-link"></i></span></p>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="en">
     <link itemprop="mainEntityOfPage" href="http://jwcheong0420.github.io/2018/05/07/ubuntu-unable-to-resolve-host/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -406,20 +491,20 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">12</span>
+          <span class="site-state-item-count">13</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
             <a href="/categories/">
           
-        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-count">8</span>
         <span class="site-state-item-name">categories</span></a>
       </div>
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">31</span>
+        <span class="site-state-item-count">33</span>
         <span class="site-state-item-name">tags</span></a>
       </div>
   </nav>

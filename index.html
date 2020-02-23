@@ -155,6 +155,87 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://jwcheong0420.github.io/2020/02/24/review-of-contributing-to-opensource/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Joowon Cheong">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="삽질특기생">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2020/02/24/review-of-contributing-to-opensource/" class="post-title-link" itemprop="url">opensource에 contribute한 후기</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2020-02-24 01:00:08" itemprop="dateCreated datePublished" datetime="2020-02-24T01:00:08+09:00">2020-02-24</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/etc/" itemprop="url" rel="index">
+                    <span itemprop="name">etc</span>
+                  </a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p>오픈소스에서 버그나 오타를 발견하는 건 사막에서 바늘 찾기라고만 생각했다.<br>그래서 오픈소스에 컨트리뷰트하는 건 나한테는 불가능한 일이고, 대단한 사람들만 하는 것이라고 생각했다.<br>그런데 나에게도 그런 일이 일어났다.</p>
+<h2 id="토요일-아침-7시에-오타를-발견하다"><a href="#토요일-아침-7시에-오타를-발견하다" class="headerlink" title="토요일 아침 7시에 오타를 발견하다"></a>토요일 아침 7시에 오타를 발견하다</h2><p>답답함에 못이겼는지 토요일인데도 아침 일찍 눈이 번쩍 떠졌다.<br>나에게 주어진 일이나 잘하자 하고 마음을 다잡으며 nvidia의 gpu device plugin 코드를 분석하려 했는데, 우연찮게 오타를 발견했다!<br><img src="/images/review-of-contributing-to-opensource/found-typo.png" alt="found-typo">  </p>
+<p>healtheck라니, healtheck라니!<br>혹시나 내가 healthcheck라고 잘못 알고 있었나 별 생각을 다하면서, 저 부분을 몇 번이고 다시 읽고 구글링도 해보았다ㅋㅋㅋㅋㅋ<br>생각보다 꽤 잘 오타가 나는 부분인지, healthcheck를 여러 번 타이핑할 때 healtheck라고 한 번씩 등장하는 모습을 볼 수 있었다.<br>일단 해보자! 만약 오타가 아니라면 PR(Pull Request)가 받아들여지지 않거나 하겠지. 라는 생각으로 나의 첫 오픈소스 컨트리뷰트 도전이 시작되었다.</p>
+<h2 id="Contribute-1차-시도"><a href="#Contribute-1차-시도" class="headerlink" title="Contribute 1차 시도"></a>Contribute 1차 시도</h2><h3 id="README-md-및-CONTRIBUTING-md-읽기"><a href="#README-md-및-CONTRIBUTING-md-읽기" class="headerlink" title="README.md 및 CONTRIBUTING.md 읽기"></a>README.md 및 CONTRIBUTING.md 읽기</h3><p>우선 오픈소스의 README와 CONTRIBUTING 문서를 살펴보았다.<br>README에는 CONTRIBUTING 문서를 살펴보고 PR로 컨트리뷰트하면 된다는 짤막한 문구가 있었고,<br><img src="/images/review-of-contributing-to-opensource/readme.png" alt="README - contributing"><br>CONTRIBUTING에는 오픈소스에 제출한 나의 코드에 대한 권리(정확한 내용은 모르겠다… <span class="exturl" data-url="aHR0cHM6Ly9kZXZlbG9wZXJjZXJ0aWZpY2F0ZS5vcmcvKeyXkA==" title="https://developercertificate.org/)에">https://developercertificate.org/)에<i class="fa fa-external-link"></i></span> 대해 commit message에 내 실명을 넣은 한 줄을 추가하면 된단다.<br><img src="/images/review-of-contributing-to-opensource/contributing.png" alt="CONTRIBUTING - sign off"></p>
+<h3 id="오픈소스-프로젝트-fork하여-작업하기"><a href="#오픈소스-프로젝트-fork하여-작업하기" class="headerlink" title="오픈소스 프로젝트 fork하여 작업하기"></a>오픈소스 프로젝트 fork하여 작업하기</h3><p>해당 오픈소스의 github 프로젝트를 fork하고, fix-typo라는 브랜치를 따서 작업했다.<br>규칙대로 commit message에는 sign off 한 줄 추가 완료!<br><img src="/images/review-of-contributing-to-opensource/first-commit.png" alt="first commit"></p>
+<h3 id="Pull-Request를-올렸다"><a href="#Pull-Request를-올렸다" class="headerlink" title="Pull Request를 올렸다!"></a>Pull Request를 올렸다!</h3><p>PR을 올리고 얼마나 두근대던지, 테스팅 파이프라인을 계속 쳐다보고 별 쇼를 다했다ㅋㅋㅋㅋ<br>그리고 PR을 올리니까 내 contribution activity에 이런 이력도 추가되었다 :)<br><img src="/images/review-of-contributing-to-opensource/first-pull-request.png" alt="first pull request"></p>
+<h3 id="읭-Merged가-아니라-왜-Closed냐옹"><a href="#읭-Merged가-아니라-왜-Closed냐옹" class="headerlink" title="읭 Merged가 아니라 왜 Closed냐옹"></a>읭 Merged가 아니라 왜 Closed냐옹</h3><p>30여분 지났는데 해당 오픈소스 collaborator가 답변을 달았다.<br>꽤나 빠른 응답시간에 놀랐고, 답변에 당황했다.<br><img src="/images/review-of-contributing-to-opensource/pull-request-closed.png" alt="pull request closed"><br>github은 gitlab의 것을 mirror한 것이니, gitlab에 다시 해달란다.<br>어… gitlab으로 오픈소스 컨트리뷰트하는 후기들은 못봤는디요… 등에서 식은땀이 흘렀다.</p>
+<h2 id="Contribute-2차-시도"><a href="#Contribute-2차-시도" class="headerlink" title="Contribute 2차 시도"></a>Contribute 2차 시도</h2><h3 id="gitlab-가입하기"><a href="#gitlab-가입하기" class="headerlink" title="gitlab 가입하기"></a>gitlab 가입하기</h3><p>구글링해보니 gitlab의 프로젝트를 github으로 옮기는 케이스는 꽤 많은 것 같았다.<br>우선 gitlab에는 회사 메일로 된 계정밖에 없어서 이 기회에 만들었다.<br>혹시 모르니 github과 동일한 아이디와 메일을 사용하도록 가입했다.</p>
+<h3 id="오픈소스-프로젝트-fork하여-작업하고-MR-올리기"><a href="#오픈소스-프로젝트-fork하여-작업하고-MR-올리기" class="headerlink" title="오픈소스 프로젝트 fork하여 작업하고, MR 올리기"></a>오픈소스 프로젝트 fork하여 작업하고, MR 올리기</h3><p>처음에 로그인하지 않고 프로젝트 화면을 봤을 때는 fork 버튼이 없어서 당황했었다.<br><img src="/images/review-of-contributing-to-opensource/gitlab-where-is-fork-button.png" alt="where is fork button?"><br>gitlab은 시스템이 다른건가…? 항상 member로만 속해있다가 다른 프로젝트에 contribute하는 건 처음이라…<br>많은 걱정 속에, 일단 gitlab 가입을 하고 로그인을 했더니 바로 fork 버튼이 나타나더라.<br><img src="/images/review-of-contributing-to-opensource/gitlab-after-login.png" alt="fork button appeared after login"><br>1차 시도 때했던 작업을 동일하게 한 뒤, MR(Merge Request, gitlab에서는 PR이 아니라 MR)을 올렸다.</p>
+<h3 id="Merged"><a href="#Merged" class="headerlink" title="Merged!"></a>Merged!</h3><p>또 30분 정도 뒤에 메일이 왔는데 이번엔 Closed가 아니라 Merged 되었다는 메일이었다:)<br><img src="/images/review-of-contributing-to-opensource/merge-request-gitlab.png" alt="merge request"></p>
+<h3 id="mirror된-github에서도-한번-확인"><a href="#mirror된-github에서도-한번-확인" class="headerlink" title="mirror된 github에서도 한번 확인"></a>mirror된 github에서도 한번 확인</h3><p>github에서는 내 commit이 어떻게 보일까 궁금해서 다시 한 번 확인해보았다.<br>아이디가 같아서인지, 저 아이디의 아이콘을 클릭하면 내 github 페이지로 이동하더라.<br><img src="/images/review-of-contributing-to-opensource/commit-more.png" alt="commit at github">  </p>
+<p>이제 내가 고친 파일의 contributor 목록에 내가 보인다(흐-뭇)<br><img src="/images/review-of-contributing-to-opensource/contributors.png" alt="contributors"></p>
+<h2 id="후기"><a href="#후기" class="headerlink" title="후기"></a>후기</h2><p>오타를 발견하고 컨트리뷰트하기까지 약 반나절이 걸렸다.<br>너무나도 신선한 경험이었고, 토요일 아침에 발견해서 그런지 이번 주말은 뿌듯한 마음으로 잘 쉬었다.(응?)<br>역시 마음 조급해할 것 없이, 내가 할 일을 하면 되는구나 싶기도 하고…<br>큰 오픈소스 프로젝트도 아니고 별 거 아닌 오타 수정일 뿐이지만, 높아만 보였던 오픈소스 컨트리뷰트의 문턱을 넘어서 기쁘다.<br>그런데 아직도 의문인건 request를 보내면 30분 안에 답이 오는 저 열일하시는 분… 역시 nvidia인건가? 멋져…</p>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="en">
     <link itemprop="mainEntityOfPage" href="http://jwcheong0420.github.io/2020/02/13/using-sysctls-in-k8s/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1497,91 +1578,6 @@
   
   
 
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="en">
-    <link itemprop="mainEntityOfPage" href="http://jwcheong0420.github.io/2018/05/09/tomcat-not-working-in-eclipse/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Joowon Cheong">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="삽질특기생">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2018/05/09/tomcat-not-working-in-eclipse/" class="post-title-link" itemprop="url">tomcat이 eclispe에서 동작하지 않을 때</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2018-05-09 22:46:16" itemprop="dateCreated datePublished" datetime="2018-05-09T22:46:16+09:00">2018-05-09</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/web/" itemprop="url" rel="index">
-                    <span itemprop="name">web</span>
-                  </a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h2 id="환경-구성"><a href="#환경-구성" class="headerlink" title="환경 구성"></a>환경 구성</h2><ul>
-<li>JDK 8<ul>
-<li>9는 지원이 끊겼고, 10으로 했을 때 eclipse 실행 시 에러가 발생했기 때문에 안전하게 8로 설치함</li>
-<li>oracle 계정이 있으면 9를 설치할 수 있는 모양인데, 굳이…</li>
-</ul>
-</li>
-<li>Eclispe EE oxygen</li>
-<li>Tomcat 8.5.31</li>
-</ul>
-<h2 id="에러-내용"><a href="#에러-내용" class="headerlink" title="에러 내용"></a>에러 내용</h2><p>Tomcat을 단독으로 실행했을 때는 localhost:8081에 페이지가 정상적으로 로드되었는데,<br>Eclispe에 server로 tomcat을 추가하여 실행하면 자꾸 다음과 같은 에러가 발생했다.<br><img src="/images/tomcat-not-working-in-eclipse/tomcat_404_in_eclipse.png" alt="" title="tomcat 404 in eclipse"></p>
-<blockquote>
-<p>The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.</p>
-</blockquote>
-<h2 id="해결-방법"><a href="#해결-방법" class="headerlink" title="해결 방법"></a>해결 방법</h2><p>Eclipse에서 server를 더블 클릭하면 server overview가 나온다.<br><img src="/images/tomcat-not-working-in-eclipse/server_overview_default.png" alt="" title="default server setting in Eclipse"></p>
-<p>이 때 다음 항목을 변경해야 한다.(HTTP 포트 번호는 굳이 변경하지 않아도 된다.)<br><img src="/images/tomcat-not-working-in-eclipse/change_server_setting.png" alt="" title="change server setting"><br>server path를 실제 Tomcat이 설치된 경로로 사용하라고 Use Tomcat installation으로 변경하고,<br>deploy path를 실제 Tomcat이 설치된 경로의 webapps 디렉토리로 변경한다.</p>
-<p>저장한 뒤 다시 start하면 다음과 같이 예쁘게 tomcat 페이지가 로드된다.<br><img src="/images/tomcat-not-working-in-eclipse/tomcat_success.png" alt="" title="tomcat works in eclipse"></p>
-<h2 id="참고-사이트"><a href="#참고-사이트" class="headerlink" title="참고 사이트"></a>참고 사이트</h2><p><span class="exturl" data-url="aHR0cHM6Ly9zdGFja292ZXJmbG93LmNvbS9xdWVzdGlvbnMvMjAyMzU5MDkvdG9tY2F0LWlzLW5vdC13b3JraW5nLWluLWVjbGlwc2U=" title="https://stackoverflow.com/questions/20235909/tomcat-is-not-working-in-eclipse">https://stackoverflow.com/questions/20235909/tomcat-is-not-working-in-eclipse<i class="fa fa-external-link"></i></span></p>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
   </div>
 
   
@@ -1652,20 +1648,20 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">12</span>
+          <span class="site-state-item-count">13</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
             <a href="/categories/">
           
-        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-count">8</span>
         <span class="site-state-item-name">categories</span></a>
       </div>
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">31</span>
+        <span class="site-state-item-count">33</span>
         <span class="site-state-item-name">tags</span></a>
       </div>
   </nav>
