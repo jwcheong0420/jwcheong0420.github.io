@@ -180,6 +180,198 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://jwcheong0420.github.io/2020/04/04/kubernetes-resource-mgmt-1-requests-and-limits/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Joowon Cheong">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="삽질특기생">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2020/04/04/kubernetes-resource-mgmt-1-requests-and-limits/" class="post-title-link" itemprop="url">Kubernetes의 resource 관리(1) - requests와 limits</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2020-04-04 00:51:58" itemprop="dateCreated datePublished" datetime="2020-04-04T00:51:58+09:00">2020-04-04</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/cloud/" itemprop="url" rel="index">
+                    <span itemprop="name">cloud</span>
+                  </a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/cloud/k8s/" itemprop="url" rel="index">
+                    <span itemprop="name">k8s</span>
+                  </a>
+                </span>
+            </span>
+
+          
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="fa fa-comment-o"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus: </span>
+    
+    <a title="disqus" href="/2020/04/04/kubernetes-resource-mgmt-1-requests-and-limits/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2020/04/04/kubernetes-resource-mgmt-1-requests-and-limits/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h2 id="Kubernetes의-Resource-Management"><a href="#Kubernetes의-Resource-Management" class="headerlink" title="Kubernetes의 Resource Management"></a>Kubernetes의 Resource Management</h2><p>Kubernetes에서 resource management하는 것에 대해 정리해보고자 한다. 꽤나 복잡해서 하나의 포스팅으로는 끝나지 않을 것 같아 내용을 나눈다.<br>이번 포스팅은 pod의 spec 중 container별로 설정할 수 있는 resource requests와 limits에 대한 내용이다.</p>
+<h3 id="Resource-Requests-amp-Limits"><a href="#Resource-Requests-amp-Limits" class="headerlink" title="Resource Requests &amp; Limits"></a>Resource Requests &amp; Limits</h3><p>Kubernetes에서 pod의 spec을 정의할 때, container별로 CPU와 Memory에 대해서 requests와 limits를 설정할 수 있다.</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Pod</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">simple-pod</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">containers:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">simple-pod-ctr</span></span><br><span class="line">    <span class="attr">image:</span> <span class="string">busybox</span></span><br><span class="line">    <span class="attr">stdin:</span> <span class="literal">true</span></span><br><span class="line">    <span class="attr">tty:</span> <span class="literal">true</span></span><br><span class="line">    <span class="attr">resources:</span></span><br><span class="line">      <span class="attr">requests:</span></span><br><span class="line">        <span class="attr">cpu:</span> <span class="number">0.5</span></span><br><span class="line">        <span class="attr">memory:</span> <span class="string">300Mi</span></span><br><span class="line">      <span class="attr">limits:</span></span><br><span class="line">        <span class="attr">cpu:</span> <span class="number">1</span></span><br><span class="line">        <span class="attr">memory:</span> <span class="string">500Mi</span></span><br></pre></td></tr></table></figure>
+<p>CPU의 경우 단위는 core이고, 0.1과 100m, 100 millicore는 모두 같은 값을 의미한다.<br>Memory의 경우 단위는 byte이다.</p>
+<h4 id="Requests"><a href="#Requests" class="headerlink" title="Requests"></a>Requests</h4><p>Requests는 pod을 scheduling할 때 참고하며, 실제 container process의 사용량이 이것을 넘는 것은 중요하지 않다.<br>사용자가 생각할 때 ‘이 container는 이 정도의 자원을 필요로 할 것이다’라는 예상치로 정하는 값이다. Soft limit정도로 생각하면 된다.  </p>
+<ul>
+<li><p>cgroup에 설정되는 값</p>
+<p>  CPU의 경우 cpu.shares 값이 설정된다. 만약 container1은 CPU requests로 0.5를, container2는 CPU requests로 1을 지정했다면, A와 B는 1:2의 비율로 스케줄링된다.<br>  Memory는 별도로 설정하는 값이 없다.</p>
+<ul>
+<li><p>테스트한 conainer yaml</p>
+  <figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Pod</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line"><span class="attr">name:</span> <span class="string">request-test</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line"><span class="attr">containers:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">name:</span> <span class="string">request-test-ctr-1</span></span><br><span class="line">    <span class="attr">image:</span> <span class="string">busybox</span></span><br><span class="line">    <span class="attr">stdin:</span> <span class="literal">true</span></span><br><span class="line">    <span class="attr">tty:</span> <span class="literal">true</span></span><br><span class="line">    <span class="attr">resources:</span></span><br><span class="line">    <span class="attr">requests:</span></span><br><span class="line">        <span class="attr">cpu:</span> <span class="number">0.5</span></span><br><span class="line">        <span class="attr">memory:</span> <span class="string">300Mi</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">name:</span> <span class="string">request-test-ctr-2</span></span><br><span class="line">    <span class="attr">image:</span> <span class="string">busybox</span></span><br><span class="line">    <span class="attr">stdin:</span> <span class="literal">true</span></span><br><span class="line">    <span class="attr">tty:</span> <span class="literal">true</span></span><br><span class="line">    <span class="attr">resources:</span></span><br><span class="line">    <span class="attr">requests:</span></span><br><span class="line">        <span class="attr">cpu:</span> <span class="number">1</span></span><br><span class="line">        <span class="attr">memory:</span> <span class="string">300Mi</span></span><br></pre></td></tr></table></figure></li>
+<li><p>cgroup 확인</p>
+<ul>
+<li><p>pod uuid와 docker container uuid 확인</p>
+<p>  <img src="/images/kubernetes-resource-mgmt-1-requests-and-limits/docker-ps.png" alt="docker ps"></p>
+<p>  다른 방법들이 많겠지만 나는 그냥 worker node로 접속해서 docker ps를 쳐서 알아내는 편이다.<br>  Docker container name의 형식은 k8s_{container name}<em>{pod name}</em>{namespace}_{pod uuid}이다.</p>
+</li>
+<li><p>해당 pod의 cgroup 접근</p>
+<p>  <img src="/images/kubernetes-resource-mgmt-1-requests-and-limits/pod-cgroup.png" alt="pod cgroup"></p>
+<p>  Pod의 cgroup 경로는 /sys/fs/cgroup/{resource type}/kubepods/{QoS class}/pod{pod uuid}이다.<br>  QoS class가 BestEffort, Burstable, Guaranteed가 있으며 왜인지 모르겠지만 Guaranteed인 경우 kubepods cgroup 밑에 바로 pod{pod uuid} cgroup이 존재한다. QoS class가 뭔지는 다음 포스팅에서 다룰 예정.</p>
+</li>
+<li><p>container별 cpu.shares 확인</p>
+<p>  <img src="/images/kubernetes-resource-mgmt-1-requests-and-limits/cpu_shares.png" alt="cpu.shares"></p>
+<p>  Pod cgroup의 cpu.shares는 1536, container1 cgroup의 것은 512, container2 cgroup의 것은 1024, pause container의 것은 2가 설정되어 있다.<br>  Kubernetes는 container별로 cpu.shares를 {CPU requests} * 1024 값으로 설정하고, pod의 cpu.shares는 pause container를 제외한 나머지 container의 cpu.shares의 합으로 설정한다. (1536 = 512 + 1024)</p>
+<p>  만약 requests를 설정하지 않으면 2이며, 이 때는 pod cgroup에 합산하지 않는다.<br>  만약 container1의 cpu request를 0.5, container2는 request를 설정하지 않았으면, pod의 cpu.shares는 512이다.<br>  만약 container 1과 2 둘 다 request를 설정하지 않았으면, pod의 cpu.shares는 2이다.<br>  (정확한 알고리즘은 나중에 코드를 확인해봐야할 것 같다.)</p>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h4 id="Limits"><a href="#Limits" class="headerlink" title="Limits"></a>Limits</h4><p>Limits는 container의 cgroup을 설정할 때 참고하는 값이므로, 실제 container process의 사용량은 이것을 넘지 못한다. Hard limit정도로 생각하면 된다.<br>Requests를 설정했다면 limits는 requests보다 크거나 같은 값이어야 한다. (Requests를 더 큰 값으로 설정할 경우 deploy 시 에러가 발생한다.)<br>Requests를 설정하지 않은 채 limits를 설정한다면, requests는 limits와 동일한 값으로 설정된다.<br>참고로 requests는 설정했지만 limits를 설정하지 않을 수도 있다. 물론 둘 다 설정하지 않아도 된다. CPU와 Memory 둘 중에 하나만 설정할 수도 있다.<br>(어떻게 설정하느냐에 따라서 아까 언급했던 QoS class가 나뉘는데, 이 역시 다른 포스팅에서…)</p>
+<ul>
+<li><p>cgroup에 설정되는 값</p>
+<p>  CPU의 경우 CPU bandwidth quota인 cpu.cfs_quota_us 값이 설정된다.<br>  Memory의 경우 memory 사용률 제한인 memory.limit_in_bytes 값이 설정된다.</p>
+<ul>
+<li><p>테스트한 conainer yaml</p>
+  <figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Pod</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line"><span class="attr">name:</span> <span class="string">request-test</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line"><span class="attr">containers:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">name:</span> <span class="string">request-test-ctr-1</span></span><br><span class="line">    <span class="attr">image:</span> <span class="string">busybox</span></span><br><span class="line">    <span class="attr">stdin:</span> <span class="literal">true</span></span><br><span class="line">    <span class="attr">tty:</span> <span class="literal">true</span></span><br><span class="line">    <span class="attr">resources:</span></span><br><span class="line">    <span class="attr">limits:</span></span><br><span class="line">        <span class="attr">cpu:</span> <span class="number">0.5</span></span><br><span class="line">        <span class="attr">memory:</span> <span class="string">300Mi</span></span><br></pre></td></tr></table></figure></li>
+<li><p>cgroup 확인</p>
+<ul>
+<li><p>container별 cpu.cfs_quota_us 확인</p>
+<p>  <img src="/images/kubernetes-resource-mgmt-1-requests-and-limits/cpu_quota.png" alt="cpu.cfs_quota_us"></p>
+<p>  Pod의 quota는 50000, container1의 quota도 50000, pause container의 quota는 설정하지 않는다(-1).<br>  Kubernetes는 cfs_quota_us를 {CPU limit} * {cfs_period_us}로 설정하고, cfs_period_us는 kernel default값인 100000을 그대로 사용한다.</p>
+<p>  참고로 cfs_quota_us는 -1일 때는 bandwidth 제한을 하지 않는다.<br>  만약 CPU limit을 주지 않을 경우 cfs_quota_us는 -1로 설정된다.</p>
+</li>
+<li><p>container별 memory.limit_in_bytes 확인</p>
+<p>  <img src="/images/kubernetes-resource-mgmt-1-requests-and-limits/mem_limit.png" alt="memory.limit_in_bytes"></p>
+<p>  Pod의 limit은 314572800, container1의 limit도 314572800, pause container의 경우 설정하지 않는다.<br>  Kubernetes는 memory.limit_in_bytes를 Memory limit값을 byte로 변환하여 설정한다.</p>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h4 id="Memory-stress-test"><a href="#Memory-stress-test" class="headerlink" title="Memory stress test"></a>Memory stress test</h4><ul>
+<li><p>시나리오</p>
+<ol>
+<li>request &amp; limit 설정하지 않았는데 out-of-memory가 발생하는 경우</li>
+<li>request 값 &lt; 실 사용량</li>
+<li>limit 값 &lt; 실 사용량</li>
+</ol>
+</li>
+<li><p>테스트 과정</p>
+<ol>
+<li><p>request &amp; limit 설정하지 않았는데 out-of-memory가 발생하는 경우</p>
+<ul>
+<li><p>test한 yaml</p>
+  <figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Pod</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line"><span class="attr">name:</span> <span class="string">memory-demo</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line"><span class="attr">restartPolicy:</span> <span class="string">Never</span></span><br><span class="line"><span class="attr">containers:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">name:</span> <span class="string">memory-demo-ctr</span></span><br><span class="line">    <span class="attr">image:</span> <span class="string">polinux/stress</span></span><br><span class="line">    <span class="attr">command:</span> <span class="string">["stress"]</span></span><br><span class="line">    <span class="attr">args:</span> <span class="string">["--vm",</span> <span class="string">"1"</span><span class="string">,</span> <span class="string">"--vm-bytes"</span><span class="string">,</span> <span class="string">"1700M"</span><span class="string">,</span> <span class="string">"--vm-hang"</span><span class="string">,</span> <span class="string">"1"</span><span class="string">]</span></span><br></pre></td></tr></table></figure></li>
+<li><p>테스트 결과</p>
+<ul>
+<li><p>Pod describe 결과</p>
+<p>  <img src="/images/kubernetes-resource-mgmt-1-requests-and-limits/mem-stress1.png" alt="mem stress test1"></p>
+<p>  해당 pod을 describe해보면 State가 Terminated로 바뀌었고, Reason이 Error라고 명시되어있다.</p>
+</li>
+<li><p>OOM killer 동작 여부 확인</p>
+<p>  <img src="/images/kubernetes-resource-mgmt-1-requests-and-limits/mem-stress1-dmesg.png" alt="dmesg 확인"></p>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>request만 설정하는 경우</p>
+<ul>
+<li><p>test한 yaml</p>
+  <figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Pod</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line"><span class="attr">name:</span> <span class="string">memory-demo</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line"><span class="attr">restartPolicy:</span> <span class="string">Never</span></span><br><span class="line"><span class="attr">containers:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">name:</span> <span class="string">memory-demo-ctr</span></span><br><span class="line">    <span class="attr">image:</span> <span class="string">polinux/stress</span></span><br><span class="line">    <span class="attr">resources:</span></span><br><span class="line">    <span class="attr">requests:</span></span><br><span class="line">        <span class="attr">memory:</span> <span class="string">300Mi</span></span><br><span class="line">    <span class="attr">command:</span> <span class="string">["stress"]</span></span><br><span class="line">    <span class="attr">args:</span> <span class="string">["--vm",</span> <span class="string">"1"</span><span class="string">,</span> <span class="string">"--vm-bytes"</span><span class="string">,</span> <span class="string">"500M"</span><span class="string">,</span> <span class="string">"--vm-hang"</span><span class="string">,</span> <span class="string">"1"</span><span class="string">]</span></span><br></pre></td></tr></table></figure>
+<p>  <img src="/images/kubernetes-resource-mgmt-1-requests-and-limits/mem-stress2.png" alt="mem stress test2"></p>
+<p>  해당 pod을 describe해보면 State는 Running으로, 아무런 일도 일어나지 않았다.</p>
+</li>
+</ul>
+</li>
+<li><p>limit 설정하는 경우</p>
+<ul>
+<li><p>test한 yaml</p>
+  <figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Pod</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line"><span class="attr">name:</span> <span class="string">memory-demo</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line"><span class="attr">restartPolicy:</span> <span class="string">Never</span></span><br><span class="line"><span class="attr">containers:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">name:</span> <span class="string">memory-demo-ctr</span></span><br><span class="line">    <span class="attr">image:</span> <span class="string">polinux/stress</span></span><br><span class="line">    <span class="attr">resources:</span></span><br><span class="line">    <span class="attr">limits:</span></span><br><span class="line">        <span class="attr">memory:</span> <span class="string">300Mi</span></span><br><span class="line">    <span class="attr">command:</span> <span class="string">["stress"]</span></span><br><span class="line">    <span class="attr">args:</span> <span class="string">["--vm",</span> <span class="string">"1"</span><span class="string">,</span> <span class="string">"--vm-bytes"</span><span class="string">,</span> <span class="string">"500M"</span><span class="string">,</span> <span class="string">"--vm-hang"</span><span class="string">,</span> <span class="string">"1"</span><span class="string">]</span></span><br></pre></td></tr></table></figure></li>
+<li><p>테스트 결과</p>
+<p>  <img src="/images/kubernetes-resource-mgmt-1-requests-and-limits/mem-stress3.png" alt="mem stress test3"></p>
+<p>  해당 pod을 describe해보면 State가 Terminated로 바뀌었고, Reason이 OOMkilled라고 명시되어있다.<br>  OOM killer 역시 동작했다.</p>
+<p>  <img src="/images/kubernetes-resource-mgmt-1-requests-and-limits/mem-stress3-dmesg.png" alt="mem stress test3 dmesg"></p>
+</li>
+</ul>
+</li>
+</ol>
+</li>
+</ul>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="en">
     <link itemprop="mainEntityOfPage" href="http://jwcheong0420.github.io/2020/02/24/review-of-contributing-to-opensource/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1643,106 +1835,6 @@
   
   
 
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="en">
-    <link itemprop="mainEntityOfPage" href="http://jwcheong0420.github.io/2018/05/19/review-boogie-board-sync/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Joowon Cheong">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="삽질특기생">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2018/05/19/review-boogie-board-sync/" class="post-title-link" itemprop="url">Boogie Board sync 9.7 사용기(feat. 찬양기)</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2018-05-19 23:23:54" itemprop="dateCreated datePublished" datetime="2018-05-19T23:23:54+09:00">2018-05-19</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/review/" itemprop="url" rel="index">
-                    <span itemprop="name">review</span>
-                  </a>
-                </span>
-            </span>
-
-          
-  
-  <span class="post-meta-item">
-    
-      <span class="post-meta-item-icon">
-        <i class="fa fa-comment-o"></i>
-      </span>
-      <span class="post-meta-item-text">Disqus: </span>
-    
-    <a title="disqus" href="/2018/05/19/review-boogie-board-sync/#disqus_thread" itemprop="discussionUrl">
-      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2018/05/19/review-boogie-board-sync/" itemprop="commentCount"></span>
-    </a>
-  </span>
-  
-  
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>학생 때부터 필기를 좋아했다.<br>필기한 것의 90퍼센트는 나중에 다시 쳐다보지 않았지만(약간 저장강박증인 것 같기도 하다)<br>뭔가 듣고 남겼다는 것에 뿌듯함을 느끼곤 했다.<br>수업을 들으면서 갤럭시노트 10.1, 아이패드 미니에 필기를 해봤지만<br>결국엔 필기감이 종이를 따라올 수 없어서 A4 이면지를 애용했다.</p>
-<p>회사 생활하면서도 이면지를 계속 쓰다가, 낱장이라는 한계에 부딪히게 되었다.<br>이면지가 섞이면 어느 순서로 봐야하는지도 모르겠고, 내가 언제한 필기인지도 몰라서<br>구석에는 항상 날짜와 몇 번째 종이인지 기록해둬야 했다. 으으 귀찮아</p>
-<p>디지털과 아날로그의 중간 단계를 원했는데 부기보드 싱크가 바로 내가 찾던 그것이었다!</p>
-<ol>
-<li>필기감이 종이에 가까운 것</li>
-<li>휴대성이 좋은 것</li>
-<li>저장이나 어플 연동이 되는 것</li>
-<li>배터리는 충전식일 것</li>
-</ol>
-<p>우리나라에서 구매하면 좀 많이 비싸서 아마존에서 해외직구로 구매하게 되었다.<br>첫 해외직구라 주소지가 한국이면 늦게 배송될 수도 있다는 말을 듣고 무서워서 배송대행지로 시켰는데,<br>지금 생각해보면 굳이 안그래도 됐었을 것 같다. 아까운 배송비…<br>무튼 아마존에서 부기보드는 $64.95, 세븐존 배송비 $12.5로 구매했다.</p>
-<h2 id="Boogie-Board-Sync-9-7"><a href="#Boogie-Board-Sync-9-7" class="headerlink" title="Boogie Board Sync 9.7"></a>Boogie Board Sync 9.7</h2><p><img src="/images/review-boogie-board-sync/boogie-photo-1.jpeg" alt=""><br>A4 정도의 크기에 펜을 굳이 따로 들고 다니지 않아도 부기보드에 끼우면 된다.<br>두께도 매우 얇아서 가볍고, 필기감이 너무 좋다.</p>
-<p><img src="/images/review-boogie-board-sync/boogie-photo-2.jpeg" alt=""><br>부기보드에 필기한 모습이다.</p>
-<h2 id="Boogie-Board-Sync-앱"><a href="#Boogie-Board-Sync-앱" class="headerlink" title="Boogie Board Sync 앱"></a>Boogie Board Sync 앱</h2><p>부기보드 싱크의 특장점! 바로 저장 및 연동이다.<br>상단의 SAVE버튼을 누르면 기기에 저장이 되고, 컴퓨터에 바로 연결해도 되고 어플을 설치하여 블루투스 연동할 수도 있다.</p>
-<p><img src="/images/review-boogie-board-sync/boogie-app-2.png" alt=""><br>블루투스 연동으로 auto downlod 설정을 해놓으니 편하다.<br>그리고 어플은 드랍박스 혹은 에버노트로 추가적인 연동이 가능하다.</p>
-<p><img src="/images/review-boogie-board-sync/boogie-app-5.png" alt=""><br>다운받은 노트는 NoteBooks 탭에서 확인이 가능하다.<br>비교적 깔끔하게 저장된 것을 확인할 수 있다.<br>그리고 가운데 탭(주황색 탭)을 누르면 부기보드에 필기하는 내용을 어플에서 라이브로 확인이 가능하다.</p>
-<h2 id="Summary"><a href="#Summary" class="headerlink" title="Summary"></a>Summary</h2><p>부기보드 싱크를 들고 가니 회사 사람들이 매우 신기해해서 뿌듯했다.<br>저장 기능이 있는 싱크 모델로 구매한 것은 정말 잘한 일이다!</p>
-<p>부기보드들은 부분 지우기를 지원하지 않는 게 단점이다.<br>최근에 부분 지우기도 가능한 모델이 출시됐지만, 그 모델은 좀 크고 싱크처럼 저장 및 연동이 되지 않아서 패스.<br>부분 지우기가 생각보다 필요하지 않아서 나에겐 별 문제가 되진 않았다.</p>
-<p>부기보드 싱크 살까말까 고민하고 계신다면 강추!<br>실제로 주변에도 추천하고 다니는 중이다ㅋㅋㅋ</p>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
   </div>
 
   
@@ -1813,7 +1905,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">13</span>
+          <span class="site-state-item-count">14</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
@@ -1826,7 +1918,7 @@
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">33</span>
+        <span class="site-state-item-count">35</span>
         <span class="site-state-item-name">tags</span></a>
       </div>
   </nav>

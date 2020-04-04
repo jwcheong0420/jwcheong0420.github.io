@@ -8,6 +8,14 @@
     </url>
 
     <url>
+        <loc>http://jwcheong0420.github.io/2020/04/04/kubernetes-resource-mgmt-1-requests-and-limits/</loc>
+        <lastmod>2020-04-03T19:59:43.646Z</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.6</priority>
+
+    </url>
+
+    <url>
         <loc>http://jwcheong0420.github.io/2020/02/24/review-of-contributing-to-opensource/</loc>
         <lastmod>2020-02-24T09:33:49.154Z</lastmod>
         <changefreq>weekly</changefreq>
