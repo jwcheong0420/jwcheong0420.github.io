@@ -8,6 +8,14 @@
     </url>
 
     <url>
+        <loc>http://jwcheong0420.github.io/2018/08/09/how-to-install-k8s/</loc>
+        <lastmod>2020-04-06T13:08:52.967Z</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.6</priority>
+
+    </url>
+
+    <url>
         <loc>http://jwcheong0420.github.io/2020/04/04/kubernetes-resource-mgmt-1-requests-and-limits/</loc>
         <lastmod>2020-04-06T12:58:57.957Z</lastmod>
         <changefreq>weekly</changefreq>
@@ -105,14 +113,6 @@
 
     <url>
         <loc>http://jwcheong0420.github.io/2018/05/19/review-boogie-board-sync/</loc>
-        <lastmod>2020-02-15T02:18:22.101Z</lastmod>
-        <changefreq>weekly</changefreq>
-        <priority>0.6</priority>
-
-    </url>
-
-    <url>
-        <loc>http://jwcheong0420.github.io/2018/08/09/how-to-install-k8s/</loc>
         <lastmod>2020-02-15T02:18:22.101Z</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.6</priority>
