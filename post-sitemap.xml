@@ -8,6 +8,30 @@
     </url>
 
     <url>
+        <loc>http://jwcheong0420.github.io/2020/02/13/using-sysctls-in-k8s/</loc>
+        <lastmod>2020-10-07T08:39:49.399Z</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.6</priority>
+
+    </url>
+
+    <url>
+        <loc>http://jwcheong0420.github.io/2020/02/05/enabling-swap-in-k8s/</loc>
+        <lastmod>2020-10-07T08:38:54.021Z</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.6</priority>
+
+    </url>
+
+    <url>
+        <loc>http://jwcheong0420.github.io/2020/04/04/kubernetes-eviction-policy/</loc>
+        <lastmod>2020-04-06T13:09:57.161Z</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.6</priority>
+
+    </url>
+
+    <url>
         <loc>http://jwcheong0420.github.io/2018/08/09/how-to-install-k8s/</loc>
         <lastmod>2020-04-06T13:08:52.967Z</lastmod>
         <changefreq>weekly</changefreq>
@@ -32,24 +56,8 @@
     </url>
 
     <url>
-        <loc>http://jwcheong0420.github.io/2020/02/13/using-sysctls-in-k8s/</loc>
-        <lastmod>2020-02-18T11:23:39.566Z</lastmod>
-        <changefreq>weekly</changefreq>
-        <priority>0.6</priority>
-
-    </url>
-
-    <url>
         <loc>http://jwcheong0420.github.io/2018/09/04/cloud-init-and-metadata-service/</loc>
         <lastmod>2020-02-18T11:19:22.982Z</lastmod>
-        <changefreq>weekly</changefreq>
-        <priority>0.6</priority>
-
-    </url>
-
-    <url>
-        <loc>http://jwcheong0420.github.io/2020/02/05/enabling-swap-in-k8s/</loc>
-        <lastmod>2020-02-15T09:21:06.661Z</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.6</priority>
 

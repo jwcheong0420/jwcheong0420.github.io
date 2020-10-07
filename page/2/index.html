@@ -180,6 +180,95 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://jwcheong0420.github.io/2018/06/20/tomcat-same-context-root/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Joowon Cheong">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="삽질특기생">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2018/06/20/tomcat-same-context-root/" class="post-title-link" itemprop="url">tomcat에 동일한 context root를 가진 web module 실행 시 발생하는 에러</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2018-06-20 18:48:22" itemprop="dateCreated datePublished" datetime="2018-06-20T18:48:22+09:00">2018-06-20</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/web/" itemprop="url" rel="index">
+                    <span itemprop="name">web</span>
+                  </a>
+                </span>
+            </span>
+
+          
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="fa fa-comment-o"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus: </span>
+    
+    <a title="disqus" href="/2018/06/20/tomcat-same-context-root/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2018/06/20/tomcat-same-context-root/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p>코딩하다보면 무의식적으로 동일한 context root를 사용하게 될 때가 있다.<br>예를 들면 강의를 듣다가 예제 프로젝트를 모두 import해두고 하나씩 실행해볼 때라던가<br>그럴 때라던가… 그럴 때밖에 없나…<br>하지만 영문 모를 에러에 당황할 사람들을 위해 해결 방법을 공유해본다.</p>
+<h2 id="에러-내용"><a href="#에러-내용" class="headerlink" title="에러 내용"></a>에러 내용</h2><p>동일한 context root를 사용하는 웹 모듈(Project)를 서버에 동시에 올릴 경우 다음과 같은 에러가 발생한다.<br><img src="/images/tomcat-same-context-root/launching-tomcat-error.png" alt="" title="error occurred while launching tomcat"></p>
+<blockquote>
+<p>Two or more Web modules defined in the configuration have the same context root (/ex). To start this server you will need to remove the duplicate(s).</p>
+</blockquote>
+<p>여기에서 context root는 ex다.</p>
+<h2 id="해결-방법"><a href="#해결-방법" class="headerlink" title="해결 방법"></a>해결 방법</h2><p>Project 우클릭 &gt; Run As &gt; Run on Server를 클릭 후, Next를 눌러 다음 페이지로 넘어간다.<br><img src="/images/tomcat-same-context-root/run-on-server-add-and-remove.png" alt="" title="add and remove project at run on server page"><br>우측 목록에서 실행하기를 원하는 프로젝트만 남기고 다른 프로젝트를 Remove한다.</p>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+        
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="en">
     <link itemprop="mainEntityOfPage" href="http://jwcheong0420.github.io/2018/05/19/review-boogie-board-sync/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -658,7 +747,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">14</span>
+          <span class="site-state-item-count">15</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
@@ -671,7 +760,7 @@
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-count">36</span>
         <span class="site-state-item-name">tags</span></a>
       </div>
   </nav>
