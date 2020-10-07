@@ -1,25 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>Kubernetes의 Eviction Policy</title>
-    <url>/2020/04/04/kubernetes-eviction-policy/</url>
-    <content><![CDATA[<h2 id="Introduction-Kubernetes의-Resource-Management"><a href="#Introduction-Kubernetes의-Resource-Management" class="headerlink" title="Introduction - Kubernetes의 Resource Management"></a>Introduction - Kubernetes의 Resource Management</h2><h3 id="Resource-Requests-amp-Limits"><a href="#Resource-Requests-amp-Limits" class="headerlink" title="Resource Requests &amp; Limits"></a>Resource Requests &amp; Limits</h3><p>Kubernetes에서 pod의 spec을 정의할 때, container별로 CPU와 Memory에 대해서 requests와 limits를 설정할 수 있다.</p>
-<h4 id="Requests"><a href="#Requests" class="headerlink" title="Requests"></a>Requests</h4><p>Requests는 pod을 scheduling할 때만 참고하며, 실제 container process의 사용량이 이것을 넘는 것은 중요하지 않다.<br>사용자가 생각할 때 ‘이 container는 이 정도의 자원을 필요로 할 것이다’라는 예상치로 정하는 값이다. Soft limit정도로 생각하면 된다.</p>
-<h4 id="Limits"><a href="#Limits" class="headerlink" title="Limits"></a>Limits</h4><p>Limits는 container의 cgroup을 설정할 때 참고하는 값이므로, 실제 container process의 사용량은 이것을 넘지 못한다. Hard limit정도로 생각하면 된다.<br>Requests를 설정했다면 limits는 requests보다 크거나 같은 값이어야 한다.<br>Requests를 설정하지 않은 채 limits를 설정한다면, requests는 limits와 동일한 값으로 설정된다.<br>참고로 requests는 설정했지만 limits를 설정하지 않을 수도 있다. 물론 둘 다 설정하지 않아도 된다. CPU와 Memory 둘 중에 하나만 설정할 수도 있다.</p>
-<h3 id="QoS-Quality-of-Service-class"><a href="#QoS-Quality-of-Service-class" class="headerlink" title="QoS(Quality of Service) class"></a>QoS(Quality of Service) class</h3><p>Container process가 사용자가 예상한 대로 requests보다 적은 메모리를 사용하면 좋으련만, 실제 운영할 때는 그렇지 않을 수도 있다. Application에 bug가 있었다거나 사용자가 잘못 사용했다거나 등등 다양한 상황이 있을 수도 있다.<br>CPU와 같은 compressible resource는 throttle되어서 resource가 부족한 상황이 완화될 수 있지만, memory와 같은 imcompressible resource는 부족한 경우 자원 획득에 실패해서 process가 죽는다. 이 경우 해당 node의 다른 pod에 영향을 미쳐서 정상적인 서비스가 불가능할 것이다.  </p>
-<p>해당 node에서 실행하고 있는 pod에 영향을 미칠 수도 있다. 따라서 Kubernetes에서는 </p>
-]]></content>
-      <categories>
-        <category>cloud</category>
-        <category>k8s</category>
-      </categories>
-      <tags>
-        <tag>kubernetes</tag>
-        <tag>k8s</tag>
-        <tag>eviction policy</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Kubernetes의 resource 관리(1) - requests와 limits</title>
     <url>/2020/04/04/kubernetes-resource-mgmt-1-requests-and-limits/</url>
     <content><![CDATA[<h2 id="Kubernetes의-Resource-Management"><a href="#Kubernetes의-Resource-Management" class="headerlink" title="Kubernetes의 Resource Management"></a>Kubernetes의 Resource Management</h2><p>Kubernetes에서 resource management하는 것에 대해 정리해보고자 한다. 꽤나 복잡해서 하나의 포스팅으로는 끝나지 않을 것 같아 내용을 나눈다.<br>이번 포스팅은 pod의 spec 중 container별로 설정할 수 있는 resource requests와 limits에 대한 내용이다.</p>
