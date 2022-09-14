@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/binary-code-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/binary-code-16x16.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="StDZENpmNwniZsyIkPBwcXfybLbk5VZzl332sCeAln4">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Noto Sans KR:300,300italic,400,400italic,700,700italic|Nanum Gothic Coding:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"jwcheong0420.github.io","root":"/","scheme":"Gemini","version":"7.8.0","exturl":true,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":"mac"},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="cgroup v2에 포커싱을 맞춰서 조사해보았다 cgroup이란 process를 계층적인 group으로 구성해서, resource 사용을 제한하고 모니터링할 수 있는 linux kernel feature cgroup의 interface는 cgroupfs이라 불리는 pseudo-filesystem을 통해 제공됨 cgroupfs의 subdirectory를 생성">
+<meta property="og:type" content="article">
+<meta property="og:title" content="cgroup v2">
+<meta property="og:url" content="http://jwcheong0420.github.io/2020/02/11/cgroup-v2/index.html">
+<meta property="og:site_name" content="삽질특기생">
+<meta property="og:description" content="cgroup v2에 포커싱을 맞춰서 조사해보았다 cgroup이란 process를 계층적인 group으로 구성해서, resource 사용을 제한하고 모니터링할 수 있는 linux kernel feature cgroup의 interface는 cgroupfs이라 불리는 pseudo-filesystem을 통해 제공됨 cgroupfs의 subdirectory를 생성">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://jwcheong0420.github.io/images/cgroup-v2/cgroup-hierarchy-v1.png">
+<meta property="og:image" content="http://jwcheong0420.github.io/images/cgroup-v2/cgroup-mounting-v2.png">
+<meta property="og:image" content="http://jwcheong0420.github.io/images/cgroup-v2/cgroup-hierarchy-v2.png">
+<meta property="og:image" content="http://jwcheong0420.github.io/images/cgroup-v2/subtree-control-example.png">
+<meta property="og:image" content="http://jwcheong0420.github.io/images/cgroup-v2/kernel-doc-cgroup-v1-tasks.png">
+<meta property="og:image" content="http://jwcheong0420.github.io/images/cgroup-v2/kernel-doc-cgroup-v1-procs.png">
+<meta property="og:image" content="http://jwcheong0420.github.io/images/cgroup-v2/proc-cgroups-v1.png">
+<meta property="og:image" content="http://jwcheong0420.github.io/images/cgroup-v2/kernel-doc-cgroup-v1-proc-cgroups.png">
+<meta property="og:image" content="http://jwcheong0420.github.io/images/cgroup-v2/cgroup-controllers-v2.png">
+<meta property="og:image" content="http://jwcheong0420.github.io/images/cgroup-v2/runc-cgroup2.png">
+<meta property="og:image" content="http://jwcheong0420.github.io/images/cgroup-v2/podman-cgroup2-cpu-controller-limit.png">
+<meta property="article:published_time" content="2020-02-11T08:17:49.000Z">
+<meta property="article:modified_time" content="2020-02-11T08:17:49.000Z">
+<meta property="article:author" content="Joowon Cheong">
+<meta property="article:tag" content="cgroup">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://jwcheong0420.github.io/images/cgroup-v2/cgroup-hierarchy-v1.png">
+
+<link rel="canonical" href="http://jwcheong0420.github.io/2020/02/11/cgroup-v2/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'en'
+  };
+</script>
+<script data-ad-client="ca-pub-2651093483415314" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+  <title>cgroup v2 | 삽질특기생</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">삽질특기생</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">다음에 삽질 덜하려고 만든 블로그</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://jwcheong0420.github.io/2020/02/11/cgroup-v2/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Joowon Cheong">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="삽질특기생">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          cgroup v2
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2020-02-11 17:17:49" itemprop="dateCreated datePublished" datetime="2020-02-11T17:17:49+09:00">2020-02-11</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/cloud/" itemprop="url" rel="index"><span itemprop="name">cloud</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/cloud/container/" itemprop="url" rel="index"><span itemprop="name">container</span></a>
+                </span>
+            </span>
+
+          
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus: </span>
+    
+    <a title="disqus" href="/2020/02/11/cgroup-v2/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2020/02/11/cgroup-v2/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>cgroup v2에 포커싱을 맞춰서 조사해보았다</p>
+<h2 id="cgroup이란"><a href="#cgroup이란" class="headerlink" title="cgroup이란"></a>cgroup이란</h2><ul>
+<li><strong>process를 계층적인 group으로</strong> 구성해서, <strong>resource 사용을 제한하고 모니터링</strong>할 수 있는 linux kernel feature</li>
+<li>cgroup의 interface는 <strong>cgroupfs</strong>이라 불리는 pseudo-filesystem을 통해 제공됨<ul>
+<li>cgroupfs의 <strong>subdirectory를 생성&#x2F;삭제&#x2F;변경</strong>하면서 정의됨</li>
+</ul>
+</li>
+</ul>
+<h2 id="구조"><a href="#구조" class="headerlink" title="구조"></a>구조</h2><ul>
+<li>core<ul>
+<li>process를 계층적으로 관리</li>
+</ul>
+</li>
+<li>subsystem(&#x3D;&#x3D; resource controller &#x3D;&#x3D; controller)<ul>
+<li>resource tracking과 제한</li>
+<li>cgroup에 속한 process의 행동을 변경함<ul>
+<li>resource 제한이나 모니터링을 하면서 process를 freeze시키거나 resume(다시 시작)하는 등</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="사용법"><a href="#사용법" class="headerlink" title="사용법"></a>사용법</h2><h3 id="mounting"><a href="#mounting" class="headerlink" title="mounting"></a>mounting</h3><ul>
+<li>v1<ul>
+<li>controller별로 mount하여 사용 가능  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">mount -t tmpfs cgroup_root /sys/fs/cgroup</span><br><span class="line"><span class="built_in">mkdir</span> /sys/fs/cgroup/cpuset</span><br><span class="line">mount -t cgroup cpuset -ocpuset /sys/fs/cgroup/cpuset</span><br></pre></td></tr></table></figure>
+  <img src="/images/cgroup-v2/cgroup-hierarchy-v1.png" alt="cgroup hierarchy v1"></li>
+</ul>
+</li>
+<li>v2<ul>
+<li>unified cgroup hierarchy  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mount -t cgroup2 none <span class="variable">$MOUNT_POINT</span></span><br></pre></td></tr></table></figure>
+  <img src="/images/cgroup-v2/cgroup-mounting-v2.png" alt="cgroup mounting example v2"><br>  <img src="/images/cgroup-v2/cgroup-hierarchy-v2.png" alt="cgroup hierarchy v2"></li>
+</ul>
+</li>
+</ul>
+<h2 id="subtree-control-cgroup2-gt-아직-잘-모르겠다"><a href="#subtree-control-cgroup2-gt-아직-잘-모르겠다" class="headerlink" title="subtree control(cgroup2) -&gt; 아직 잘 모르겠다"></a>subtree control(cgroup2) -&gt; 아직 잘 모르겠다</h2><ul>
+<li>cgroup.controllers<ul>
+<li>read-only file</li>
+<li>해당 cgroup에 available한 controller의 list를 노출</li>
+<li>부모 cgroup의 cgroup.subtreee_control과 내용이 동일함???</li>
+</ul>
+</li>
+<li>cgroup.subtree_control<ul>
+<li>해당 cgroup에 활성화되어있는 controller 목록</li>
+<li>해당 cgroup의 cgroup.controllers에 있는 subset????</li>
+<li>이 파일에 +, -로 controller들을 활성화, 비활성화 가능  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> <span class="string">&#x27;+pids -memory&#x27;</span> &gt; x/y/cgroup.subtree_control</span><br></pre></td></tr></table></figure>
+<ul>
+<li>cgroup.controllers에 없는 controller를 enable시키려하면 ENOENT 에러 발생  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cat</span> cgroup.controllers        <span class="comment"># 사용 가능한 controller 없음 확인</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;-io&quot;</span> &gt; cgroup.subtree_control    <span class="comment"># 문제 없음</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;+io&quot;</span> &gt; cgroup.subtree_control    <span class="comment"># cgroup.controllers에 없으므로 에러 발생</span></span><br></pre></td></tr></table></figure>
+  <img src="/images/cgroup-v2/subtree-control-example.png" alt="subtree control example"></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="thread-mode-cgroup2"><a href="#thread-mode-cgroup2" class="headerlink" title="thread mode (cgroup2)"></a>thread mode (cgroup2)</h2><ul>
+<li>Linux 4.14에 추가<ul>
+<li>cpu와 같은 몇몇 controller들은 thread-level granularity 제어가 유용하기 때문</li>
+</ul>
+</li>
+<li>root가 아닌 cgroup은 cgroup.type 파일이 있음<ul>
+<li>type value<ul>
+<li>domain(default)<ul>
+<li>nomal v2 cgroup</li>
+<li>process-granularity</li>
+</ul>
+</li>
+<li>threaded<ul>
+<li>threaded subtree의 멤버 cgroup</li>
+<li>process가 추가될 수 있고 controller가 활성화될 수 있음</li>
+</ul>
+</li>
+<li>domain threaded<ul>
+<li>threaded subtree의 root처럼 여겨지는 domain cgroup</li>
+</ul>
+</li>
+<li>domain invalid<ul>
+<li>threaded subtree 안에 있는 invalid 상태인 cgroup</li>
+<li>process가 추가될 수 없고 controller도 활성화될 수 없음</li>
+<li>할 수 있는 단 한 가지 일은 이 cgroup을 threaded cgroup으로 바꾸는 것 뿐</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>threaded controllers &#x2F; domain controllers<ul>
+<li>threaded controllers<ul>
+<li>cpu, perf_event, pids</li>
+</ul>
+</li>
+<li>domain controllers<ul>
+<li>threaded subtree에서는 활성화될 수 없음</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="deprecated-v1-core-features"><a href="#deprecated-v1-core-features" class="headerlink" title="deprecated v1 core features"></a>deprecated v1 core features</h2><ol>
+<li><p>Multiple hierarchies including named ones are not supported.</p>
+<ul>
+<li>같은 계층에 여러 controller를 mount할 수 있었음</li>
+<li>named hierarchies<ul>
+<li>controller가 attach되지 않은 cgroup 계층도 mount 가능했었음</li>
+<li>각 계층은 unique한 이름을 가져야 함  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mount -t cgroup -o none,name=somename none /some/mount/point</span><br></pre></td></tr></table></figure></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>All v1 mount options are not supported.</p>
+<ul>
+<li>v1의 경우, 원래는 controller별로 mount가 가능했을 뿐 아니라 모든 controller를 mount 하는 기능이 있었음 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mount -t cgroup xxx /sys/fs/cgroup  <span class="comment"># xxx는 cgroup과는 관계가 없고 /proc/mounts에 나타날 내용이므로 마음대로 유용하고 식별 가능한 이름을 사용하면 됨</span></span><br></pre></td></tr></table></figure></li>
+</ul>
+</li>
+<li><p>The “tasks” file is removed and “cgroup.procs” is not sorted.</p>
+<ul>
+<li>v1<ul>
+<li>tasks에 pid를 관리하고 cgroup.procs라는 파일에 tgid를 관리했었음<br>  <img src="/images/cgroup-v2/kernel-doc-cgroup-v1-tasks.png" alt="tasks in cgroup v1"></li>
+<li>cgroup.procs는 tgid를 정렬하고 중복제거 했었음<br>  <img src="/images/cgroup-v2/kernel-doc-cgroup-v1-procs.png" alt="cgroup.procs in cgroup v1"></li>
+</ul>
+</li>
+<li>v2<ul>
+<li>croups.procs에 pid를 관리하고, 중복제거 및 정렬되지 않음</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>“cgroup.clone_children” is removed.</p>
+<ul>
+<li>cpuset controller에만 영향을 미치는 flag</li>
+<li>1로 활성화되어있으면, 새로운 cpuset cgroup이 초기화하는 동안 부모로부터 설정을 복사했었음</li>
+</ul>
+</li>
+<li><p>&#x2F;proc&#x2F;cgroups is meaningless for v2.  Use “cgroup.controllers” file at the root instead.</p>
+<ul>
+<li>v1<ul>
+<li>&#x2F;proc&#x2F;cgroups에 kernel에 compile되어 들어간 controller에 대한 정보를 담고 있음<br>  <img src="/images/cgroup-v2/proc-cgroups-v1.png" alt="/proc/cgroups in v1"><br>  <img src="/images/cgroup-v2/kernel-doc-cgroup-v1-proc-cgroups.png" alt="/proc/cgroups values"></li>
+</ul>
+</li>
+<li>v2<ul>
+<li>cgroup2는 controller별로 mount하는 것이 아니기 때문에, 한 계층에 여러 controller가 mount되어있는지 여부를 관리할 필요가 없기 때문에 없어진 것 같음<br>  <img src="/images/cgroup-v2/cgroup-controllers-v2.png" alt="cgroup.controllers"></li>
+</ul>
+</li>
+</ul>
+</li>
+</ol>
+<h2 id="v1에서의-이슈-v2의-근거"><a href="#v1에서의-이슈-v2의-근거" class="headerlink" title="v1에서의 이슈(v2의 근거)"></a>v1에서의 이슈(v2의 근거)</h2><ol>
+<li><p>Multiple Hierarchies</p>
+<ul>
+<li>문제점 @v1<ul>
+<li>v1은 임의의 계층을 만들 수 있고, 각 계층에 몇 개의 controller가 mount되어도 상관없었음. 이것은 flexibility를 보장하는 것 같았지만, 실상은 유용하지 않았음<ul>
+<li>cpu, cpuacct와 같은 밀접하게 관련된 것들만 같은 계층에 mount되어 사용됨</li>
+<li>결국 사용자가 각 계층마다 비슷한 계층구조를 반복해서 만들게 됨</li>
+</ul>
+</li>
+<li>이에 대한 core 구현이 너무 복잡하여 비용이 큼</li>
+<li>계층이 몇개가 되던 limit이 없었음</li>
+<li>다른 controller의 토폴로지를 예상할 수 없었기 때문에, 각 controller는 다른 모든 controller가 완전히 직교 계층 구조에 연결되어있다고 생각해야 함<ul>
+<li>일반적으로 요구되는 것은, 특정 controller에 따라 다른 수준의 granularity(세분성)을 갖는 것<ul>
+<li>ex) 특정 레벨 전까지는 memory는 관리 안하고, CPU 관리는 하길 바라는 등</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>개선 @v2<ul>
+<li>모든 controller가 하나의 계층에 mount됨</li>
+<li>subtree control로 controller 관리</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>Thread Granularity</p>
+<ul>
+<li>문제점 @v1<ul>
+<li>v1은 thread가 다른 cgroup에 속할 수 있었음<ul>
+<li>몇몇 controller와는 사상이 맞지 않음<ul>
+<li>ex) 하나의 process에 있는 thread들은 memory를 공유하므로 다른 memory cgroup에 속할 수 없음</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>v1은 모호하게 정의된 delegated(위임) 모델이어서, thread granularity(세분성)이 남용됨<ul>
+<li>cgroup은 개별 application에 위임되어서, 자체적으로 하위 계층을 만들고 관리하고 그에 따른 리소스 분배를 제한할 수 있었음</li>
+<li>cgroup은 이렇게 노출되기 때문에 근본적으로 부적절한 interface를 갖고 있음<ul>
+<li>&#x2F;proc&#x2F;self&#x2F;cgroup에서 대상 계층 구조의 path를 추출<br>  -&gt; knob(손잡이) 이름을 path에 추가하여 path를 구성<br>  -&gt; open하여 read&#x2F;write함</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>개선 @v2<ul>
+<li>process granularity<ul>
+<li>process 단위로 cgroup에 속할 수 있음</li>
+<li>하나의 process에 속하는 모든 thread는 같은 cgroup에 속함</li>
+<li>Linux 4.14의 thread mode 추가로 인해 rule이 몇몇 case에 대해서 완화됨</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>Other Interface Issues -&gt; 잘 모르겠다</p>
+<ul>
+<li>core에서 empty cgroup에 알림을 보내는 것 관련하여 event 전달 매커니즘이 이상함</li>
+<li>controller 역시 계층적 조직을 완전히 무시하고 모든 cgroup을 마치 root cgroup 바로 아래에 있는 것처럼 취급하여 문제가 많음</li>
+</ul>
+</li>
+<li><p>Controller Issues and Remedies</p>
+<ul>
+<li>Memory<ul>
+<li>soft limit &#x2F; hard limit 관련 이슈 개선</li>
+</ul>
+</li>
+</ul>
+</li>
+</ol>
+<h2 id="왜-cgroup-v2로-빨리-migrate할-수-없는가"><a href="#왜-cgroup-v2로-빨리-migrate할-수-없는가" class="headerlink" title="왜 cgroup v2로 빨리 migrate할 수 없는가?"></a>왜 cgroup v2로 빨리 migrate할 수 없는가?</h2><ul>
+<li>device controller와 freezer에 대한 지원이 없어서 container한테 유용하지 않았음<ul>
+<li>device controller가 없어서 container 안의 root user가 device file에 바로 접근할 수 있음</li>
+<li>container를 freeze할 수 없어서 TOCTOU 공격에 예방하지 못함</li>
+<li>4.15 (2018&#x2F;01)에 device controller 지원</li>
+<li>5.2에 freezer 지원</li>
+</ul>
+</li>
+<li>v1과 v2은 호환되지 않기 때문에, v1에서 v2로 migrate하는 것이 어려움<ul>
+<li>v1과 v2를 혼합해서 사용하는 hybird 옵션이 있긴 하지만, 이미 v1에 활성화되어있는 controller를 v2에 활성화시키지 못하므로 container에 잘 사용되지 않음</li>
+</ul>
+</li>
+</ul>
+<h2 id="cgroup2-사용처"><a href="#cgroup2-사용처" class="headerlink" title="cgroup2 사용처"></a>cgroup2 사용처</h2><ul>
+<li>Linux 배포판<ul>
+<li>Fedora 31에 default로 adopt됨</li>
+<li>Linux 4.2 이상이고 systemd가 v226 이상인 경우, systemd.unified_cgroup_hierarchy&#x3D;1 옵션을 kernel argument에 추가하면 동작</li>
+</ul>
+</li>
+<li>low-level container runtimes<ul>
+<li>runc<ul>
+<li>최초 지원 시작(2019&#x2F;09, <a target="_blank" rel="noopener" href="https://github.com/opencontainers/runc/pull/2113">https://github.com/opencontainers/runc/pull/2113</a>)</li>
+<li>여러 문제로 아직 정식으로 지원하지는 않음<ul>
+<li><img src="/images/cgroup-v2/runc-cgroup2.png" alt="runc not support cgroup v2 yet"></li>
+</ul>
+</li>
+<li>Issue Tracking<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/opencontainers/runc/issues?utf8=%E2%9C%93&amp;q=is:issue+is:open+cgroup2">https://github.com/opencontainers/runc/issues?utf8=%E2%9C%93&amp;q=is%3Aissue+is%3Aopen+cgroup2</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li>crun<ul>
+<li>Red Hat이 이끌고 있는 OCI Runtime Spec</li>
+<li>cgroup v2 full support 제공</li>
+<li>Fedora 31에 default runtime으로 adopt됨</li>
+</ul>
+</li>
+<li>lxc<ul>
+<li>merge된 PR들이 보이긴 하는데…?<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/lxc/lxc/pull/2897">https://github.com/lxc/lxc/pull/2897</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/lxc/lxc/pull/3120">https://github.com/lxc/lxc/pull/3120</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/lxc/lxc/pull/3194">https://github.com/lxc/lxc/pull/3194</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>high-level container runtimes<ul>
+<li>containerd<ul>
+<li>Merged<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/containerd/containerd/pull/3799">https://github.com/containerd/containerd/pull/3799</a></li>
+</ul>
+</li>
+<li>Tracking Issue<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/containerd/containerd/issues/3726">https://github.com/containerd/containerd/issues/3726</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Docker &#x2F; Moby<ul>
+<li>Merged<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/moby/moby/pull/40174">https://github.com/moby/moby/pull/40174</a></li>
+</ul>
+</li>
+<li>Tracking Issue<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/moby/moby/issues/40360">https://github.com/moby/moby/issues/40360</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Podman<ul>
+<li>crun과 함께 지원</li>
+<li>Fedora 31이라면 별도의 설정 변경 없이 사용 가능</li>
+<li>cpu controller에 대한 제한 사항이 있음<br>  <img src="/images/cgroup-v2/podman-cgroup2-cpu-controller-limit.png" alt="problem with cgroup2 about cpu controller in podman"></li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Kubernetes<ul>
+<li>KEP(Kubernetes Enhancement Proposal) 추가를 위한 PR opened<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/kubernetes/enhancements/pull/1370">https://github.com/kubernetes/enhancements/pull/1370</a></li>
+</ul>
+</li>
+<li>alpha version 2020</li>
+<li>fully support 2021~2022</li>
+</ul>
+</li>
+</ul>
+<h2 id="참고-링크"><a href="#참고-링크" class="headerlink" title="참고 링크"></a>참고 링크</h2><ul>
+<li><a target="_blank" rel="noopener" href="http://man7.org/linux/man-pages/man7/cgroups.7.html">http://man7.org/linux/man-pages/man7/cgroups.7.html</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.kernel.org/doc/Documentation/cgroup-v2.txt">https://www.kernel.org/doc/Documentation/cgroup-v2.txt</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.kernel.org/doc/Documentation/cgroup-v1/cgroups.txt">https://www.kernel.org/doc/Documentation/cgroup-v1/cgroups.txt</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.redhat.com/en/blog/world-domination-cgroups-rhel-8-welcome-cgroups-v2">https://www.redhat.com/en/blog/world-domination-cgroups-rhel-8-welcome-cgroups-v2</a></li>
+<li><a target="_blank" rel="noopener" href="http://www.man7.org/conf/lca2019/cgroups_v2-LCA2019-Kerrisk.pdf">http://www.man7.org/conf/lca2019/cgroups_v2-LCA2019-Kerrisk.pdf</a></li>
+<li><a target="_blank" rel="noopener" href="https://medium.com/nttlabs/cgroup-v2-596d035be4d7">https://medium.com/nttlabs/cgroup-v2-596d035be4d7</a></li>
+<li><a target="_blank" rel="noopener" href="https://serverfault.com/questions/929080/list-of-controllers-empty-with-cgroup-v2">https://serverfault.com/questions/929080/list-of-controllers-empty-with-cgroup-v2</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/opencontainers/runc#releases">https://github.com/opencontainers/runc#releases</a></li>
+</ul>
+
+    </div>
+
+    
+    
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- post-body-end -->
+<ins class="adsbygoogle"
+     style="display:block"
+     data-ad-client="ca-pub-2651093483415314"
+     data-ad-slot="8169778994"
+     data-ad-format="auto"
+     data-full-width-responsive="true"></ins>
+<script>
+     (adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/cgroup/" rel="tag"># cgroup</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2020/02/05/enabling-swap-in-k8s/" rel="prev" title="Kubernetes에서 swap 사용하는 방법">
+      <i class="fa fa-chevron-left"></i> Kubernetes에서 swap 사용하는 방법
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2020/02/13/using-sysctls-in-k8s/" rel="next" title="Kubernetes에서 sysctls 설정 변경하는 방법(feat. proc & sysctl)">
+      Kubernetes에서 sysctls 설정 변경하는 방법(feat. proc & sysctl) <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    
+  <div class="comments">
+    <div id="disqus_thread">
+      <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+    </div>
+  </div>
+  
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#cgroup%EC%9D%B4%EB%9E%80"><span class="nav-number">1.</span> <span class="nav-text">cgroup이란</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%EA%B5%AC%EC%A1%B0"><span class="nav-number">2.</span> <span class="nav-text">구조</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%EC%82%AC%EC%9A%A9%EB%B2%95"><span class="nav-number">3.</span> <span class="nav-text">사용법</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#mounting"><span class="nav-number">3.1.</span> <span class="nav-text">mounting</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#subtree-control-cgroup2-gt-%EC%95%84%EC%A7%81-%EC%9E%98-%EB%AA%A8%EB%A5%B4%EA%B2%A0%EB%8B%A4"><span class="nav-number">4.</span> <span class="nav-text">subtree control(cgroup2) -&gt; 아직 잘 모르겠다</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#thread-mode-cgroup2"><span class="nav-number">5.</span> <span class="nav-text">thread mode (cgroup2)</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#deprecated-v1-core-features"><span class="nav-number">6.</span> <span class="nav-text">deprecated v1 core features</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#v1%EC%97%90%EC%84%9C%EC%9D%98-%EC%9D%B4%EC%8A%88-v2%EC%9D%98-%EA%B7%BC%EA%B1%B0"><span class="nav-number">7.</span> <span class="nav-text">v1에서의 이슈(v2의 근거)</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%EC%99%9C-cgroup-v2%EB%A1%9C-%EB%B9%A8%EB%A6%AC-migrate%ED%95%A0-%EC%88%98-%EC%97%86%EB%8A%94%EA%B0%80"><span class="nav-number">8.</span> <span class="nav-text">왜 cgroup v2로 빨리 migrate할 수 없는가?</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#cgroup2-%EC%82%AC%EC%9A%A9%EC%B2%98"><span class="nav-number">9.</span> <span class="nav-text">cgroup2 사용처</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%EC%B0%B8%EA%B3%A0-%EB%A7%81%ED%81%AC"><span class="nav-number">10.</span> <span class="nav-text">참고 링크</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">Joowon Cheong</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">16</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">46</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Joowon Cheong</span>
+</div>
+  <div class="powered-by">Powered by <span class="exturl theme-link" data-url="aHR0cHM6Ly9oZXhvLmlv">Hexo</span> & <span class="exturl theme-link" data-url="aHR0cHM6Ly90aGVtZS1uZXh0Lm9yZw==">NexT.Gemini</span>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<script>
+  function loadCount() {
+    var d = document, s = d.createElement('script');
+    s.src = 'https://jwcheong0420-github-io.disqus.com/count.js';
+    s.id = 'dsq-count-scr';
+    (d.head || d.body).appendChild(s);
+  }
+  // defer loading until the whole page loading is completed
+  window.addEventListener('load', loadCount, false);
+</script>
+<script>
+  var disqus_config = function() {
+    this.page.url = "http://jwcheong0420.github.io/2020/02/11/cgroup-v2/";
+    this.page.identifier = "2020/02/11/cgroup-v2/";
+    this.page.title = "cgroup v2";
+    };
+  NexT.utils.loadComments(document.querySelector('#disqus_thread'), () => {
+    if (window.DISQUS) {
+      DISQUS.reset({
+        reload: true,
+        config: disqus_config
+      });
+    } else {
+      var d = document, s = d.createElement('script');
+      s.src = 'https://jwcheong0420-github-io.disqus.com/embed.js';
+      s.setAttribute('data-timestamp', '' + +new Date());
+      (d.head || d.body).appendChild(s);
+    }
+  });
+</script>
+
+</body>
+</html>

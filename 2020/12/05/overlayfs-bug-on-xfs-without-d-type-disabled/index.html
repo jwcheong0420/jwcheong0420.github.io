@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/binary-code-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/binary-code-16x16.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="StDZENpmNwniZsyIkPBwcXfybLbk5VZzl332sCeAln4">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Noto Sans KR:300,300italic,400,400italic,700,700italic|Nanum Gothic Coding:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"jwcheong0420.github.io","root":"/","scheme":"Gemini","version":"7.8.0","exturl":true,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":"mac"},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="문제 상황환경 세팅 중 crio가 다음과 같은 fatal log를 출력하고 종료되었다. 1Dec 01 18:02:54 bp-master001 crio[8263]: time&#x3D;&quot;2020-12-01 18:02:54.147849982+09:00&quot; level&#x3D;fatal msg&#x3D;&quot;kernel does not support overlay fs">
+<meta property="og:type" content="article">
+<meta property="og:title" content="overlayfs 버그 - xfs 사용 시 ftype&#x3D;0인 경우 파일 삭제 시 인식하지 못함">
+<meta property="og:url" content="http://jwcheong0420.github.io/2020/12/05/overlayfs-bug-on-xfs-without-d-type-disabled/index.html">
+<meta property="og:site_name" content="삽질특기생">
+<meta property="og:description" content="문제 상황환경 세팅 중 crio가 다음과 같은 fatal log를 출력하고 종료되었다. 1Dec 01 18:02:54 bp-master001 crio[8263]: time&#x3D;&quot;2020-12-01 18:02:54.147849982+09:00&quot; level&#x3D;fatal msg&#x3D;&quot;kernel does not support overlay fs">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2020-12-04T16:43:33.000Z">
+<meta property="article:modified_time" content="2020-12-04T16:43:33.000Z">
+<meta property="article:author" content="Joowon Cheong">
+<meta property="article:tag" content="overlayfs">
+<meta property="article:tag" content="xfs">
+<meta property="article:tag" content="ftype">
+<meta property="article:tag" content="d_type">
+<meta property="article:tag" content="crio">
+<meta property="article:tag" content="docker">
+<meta property="article:tag" content="container">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://jwcheong0420.github.io/2020/12/05/overlayfs-bug-on-xfs-without-d-type-disabled/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'en'
+  };
+</script>
+<script data-ad-client="ca-pub-2651093483415314" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+  <title>overlayfs 버그 - xfs 사용 시 ftype=0인 경우 파일 삭제 시 인식하지 못함 | 삽질특기생</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">삽질특기생</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">다음에 삽질 덜하려고 만든 블로그</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://jwcheong0420.github.io/2020/12/05/overlayfs-bug-on-xfs-without-d-type-disabled/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Joowon Cheong">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="삽질특기생">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          overlayfs 버그 - xfs 사용 시 ftype=0인 경우 파일 삭제 시 인식하지 못함
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2020-12-05 01:43:33" itemprop="dateCreated datePublished" datetime="2020-12-05T01:43:33+09:00">2020-12-05</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/cloud/" itemprop="url" rel="index"><span itemprop="name">cloud</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/cloud/container/" itemprop="url" rel="index"><span itemprop="name">container</span></a>
+                </span>
+            </span>
+
+          
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus: </span>
+    
+    <a title="disqus" href="/2020/12/05/overlayfs-bug-on-xfs-without-d-type-disabled/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2020/12/05/overlayfs-bug-on-xfs-without-d-type-disabled/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h2 id="문제-상황"><a href="#문제-상황" class="headerlink" title="문제 상황"></a>문제 상황</h2><p>환경 세팅 중 crio가 다음과 같은 fatal log를 출력하고 종료되었다.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Dec 01 18:02:54 bp-master001 crio[8263]: time=<span class="string">&quot;2020-12-01 18:02:54.147849982+09:00&quot;</span> level=fatal msg=<span class="string">&quot;kernel does not support overlay fs: overlay: the backing xfs filesystem is formatted without d_type support, which leads to incorrect behavior. Reformat the filesystem with ftype=1 to enable d_type support. Running without d_type is not supported.: driver not supported&quot;</span></span><br></pre></td></tr></table></figure>
+<p>backing filesystem으로 d_type을 지원하지 않는 xfs를 사용하면 비정상적인 동작으로 이끌 수 있으니,<br>ftype&#x3D;1로 파일시스템을 다시 포맷하여 d_type 지원을 활성화시키라는 내용이다.</p>
+<h2 id="관련-이슈-확인"><a href="#관련-이슈-확인" class="headerlink" title="관련 이슈 확인"></a>관련 이슈 확인</h2><p>overlayfs에서 위와 같은 상황에서 <a target="_blank" rel="noopener" href="https://patchwork.kernel.org/project/linux-fsdevel/patch/20160222142834.GA18393@redhat.com/">삭제된 파일이 삭제되었다고 표시되지 않는 버그</a>가 있다고 한다.</p>
+<blockquote>
+<p>During mount, make sure upper fs supports d_type otherwise error out.<br>In some instances xfs has been created with ftype&#x3D;0 and there if a file on lower fs is removed, overlay leaves a whiteout in upper fs but that whiteout does not get filtered out and is visible to overlayfs users.<br>And reason it does not get filtered out because upper filesystem does<br>not report file type of whiteout as DT_CHR during iterate_dir().<br>So it seems to be a requirement that upper filesystem support d_type for overlayfs to work properly. Do this check during mount and fail if d_type is not supported.</p>
+</blockquote>
+<h2 id="버그-재현"><a href="#버그-재현" class="headerlink" title="버그 재현"></a>버그 재현</h2><h3 id="파티션-생성"><a href="#파티션-생성" class="headerlink" title="파티션 생성"></a>파티션 생성</h3><p>테스트를 위한 새로운 파티션을 생성한다.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># fdisk /dev/sdb</span></span><br></pre></td></tr></table></figure>
+
+<details>
+<summary>생성 과정</summary>
+<div markdown="1">
+
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">[root@master ~]<span class="comment"># fdisk /dev/sdb</span></span><br><span class="line">Welcome to fdisk (util-linux 2.23.2).</span><br><span class="line"></span><br><span class="line">Changes will remain <span class="keyword">in</span> memory only, until you decide to write them.</span><br><span class="line">Be careful before using the write <span class="built_in">command</span>.</span><br><span class="line"></span><br><span class="line">Device does not contain a recognized partition table</span><br><span class="line">Building a new DOS disklabel with disk identifier 0x4aa3c9aa.</span><br><span class="line"></span><br><span class="line">Command (m <span class="keyword">for</span> <span class="built_in">help</span>): n</span><br><span class="line">Partition <span class="built_in">type</span>:</span><br><span class="line">   p   primary (0 primary, 0 extended, 4 free)</span><br><span class="line">   e   extended</span><br><span class="line">Select (default p): p</span><br><span class="line">Partition number (1-4, default 1): </span><br><span class="line">First sector (2048-16777215, default 2048): </span><br><span class="line">Using default value 2048</span><br><span class="line">Last sector, +sectors or +size&#123;K,M,G&#125; (2048-16777215, default 16777215): </span><br><span class="line">Using default value 16777215</span><br><span class="line">Partition 1 of <span class="built_in">type</span> Linux and of size 8 GiB is <span class="built_in">set</span></span><br><span class="line"></span><br><span class="line">Command (m <span class="keyword">for</span> <span class="built_in">help</span>): w</span><br><span class="line">The partition table has been altered!</span><br><span class="line"></span><br><span class="line">Calling ioctl() to re-read partition table.</span><br><span class="line">Syncing disks.</span><br></pre></td></tr></table></figure>
+</details>
+
+<h3 id="xfs-생성"><a href="#xfs-생성" class="headerlink" title="xfs 생성"></a>xfs 생성</h3><p>xfs 생성 시 ftype&#x3D;0 옵션을 추가한다.<br>참고로 ftype&#x3D;0은 crc&#x3D;0도 추가해야한다.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># mkfs -t xfs -n ftype=0 /dev/sdb1</span></span><br></pre></td></tr></table></figure>
+
+<details>
+<summary>생성 과정</summary>
+<div markdown="1">
+
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">[root@master ~]<span class="comment"># mkfs -t xfs -n ftype=0 -m crc=0 /dev/sdb1</span></span><br><span class="line">meta-data=/dev/sdb1              isize=256    agcount=4, agsize=524224 blks</span><br><span class="line">         =                       sectsz=512   attr=2, projid32bit=1</span><br><span class="line">         =                       crc=0        finobt=0, sparse=0</span><br><span class="line">data     =                       bsize=4096   blocks=2096896, imaxpct=25</span><br><span class="line">         =                       sunit=0      swidth=0 blks</span><br><span class="line">naming   =version 2              bsize=4096   ascii-ci=0 ftype=0</span><br><span class="line"><span class="built_in">log</span>      =internal <span class="built_in">log</span>           bsize=4096   blocks=2560, version=2</span><br><span class="line">         =                       sectsz=512   sunit=0 blks, lazy-count=1</span><br><span class="line">realtime =none                   extsz=4096   blocks=0, rtextents=0</span><br></pre></td></tr></table></figure>
+</details>
+
+<details>
+<summary>crc=0 없이 생성한 경우</summary>
+<div markdown="1">
+
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">[root@master ~]<span class="comment"># mkfs -t xfs -n ftype=0 /dev/sdb1</span></span><br><span class="line">cannot <span class="built_in">disable</span> ftype with crcs enabled</span><br><span class="line">Usage: mkfs.xfs</span><br><span class="line">/* blocksize */		[-b <span class="built_in">log</span>=n|size=num]</span><br><span class="line">/* metadata */		[-m crc=0|1,finobt=0|1,uuid=xxx]</span><br><span class="line">/* data subvol */	[-d agcount=n,agsize=n,file,name=xxx,size=num,</span><br><span class="line">			    (sunit=value,swidth=value|su=num,sw=num|noalign),</span><br><span class="line">			    sectlog=n|sectsize=num</span><br><span class="line">/* force overwrite */	[-f]</span><br><span class="line">/* inode size */	[-i <span class="built_in">log</span>=n|perblock=n|size=num,maxpct=n,attr=0|1|2,</span><br><span class="line">			    projid32bit=0|1]</span><br><span class="line">/* no discard */	[-K]</span><br><span class="line">/* <span class="built_in">log</span> subvol */	[-l agnum=n,internal,size=num,logdev=xxx,version=n</span><br><span class="line">			    sunit=value|su=num,sectlog=n|sectsize=num,</span><br><span class="line">			    lazy-count=0|1]</span><br><span class="line">/* label */		[-L label (maximum 12 characters)]</span><br><span class="line">/* naming */		[-n <span class="built_in">log</span>=n|size=num,version=2|ci,ftype=0|1]</span><br><span class="line">/* no-op info only */	[-N]</span><br><span class="line">/* prototype file */	[-p fname]</span><br><span class="line">/* quiet */		[-q]</span><br><span class="line">/* realtime subvol */	[-r extsize=num,size=num,rtdev=xxx]</span><br><span class="line">/* sectorsize */	[-s <span class="built_in">log</span>=n|size=num]</span><br><span class="line">/* version */		[-V]</span><br><span class="line">			devicename</span><br><span class="line">&lt;devicename&gt; is required unless -d name=xxx is given.</span><br><span class="line">&lt;num&gt; is xxx (bytes), xxxs (sectors), xxxb (fs blocks), xxxk (xxx KiB),</span><br><span class="line">      xxxm (xxx MiB), xxxg (xxx GiB), xxxt (xxx TiB) or xxxp (xxx PiB).</span><br><span class="line">&lt;value&gt; is xxx (512 byte blocks).</span><br></pre></td></tr></table></figure>
+</div>
+</details>
+
+<h3 id="fstab에-mount-정보-추가-및-적용"><a href="#fstab에-mount-정보-추가-및-적용" class="headerlink" title="fstab에 mount 정보 추가 및 적용"></a>fstab에 mount 정보 추가 및 적용</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">[root@master ~]<span class="comment"># vi /etc/fstab</span></span><br><span class="line">/dev/sdb1       /root/ftype0    xfs     defaults        0 0</span><br><span class="line">[root@master ~]<span class="comment"># mkdir /root/ftype0</span></span><br><span class="line">[root@master ~]<span class="comment"># mount -a</span></span><br><span class="line">[root@master ~]<span class="comment"># xfs_info /root/ftype0</span></span><br><span class="line">meta-data=/dev/sdb1              isize=256    agcount=4, agsize=524224 blks</span><br><span class="line">         =                       sectsz=512   attr=2, projid32bit=1</span><br><span class="line">         =                       crc=0        finobt=0 spinodes=0</span><br><span class="line">data     =                       bsize=4096   blocks=2096896, imaxpct=25</span><br><span class="line">         =                       sunit=0      swidth=0 blks</span><br><span class="line">naming   =version 2              bsize=4096   ascii-ci=0 ftype=0</span><br><span class="line"><span class="built_in">log</span>      =internal               bsize=4096   blocks=2560, version=2</span><br><span class="line">         =                       sectsz=512   sunit=0 blks, lazy-count=1</span><br><span class="line">realtime =none                   extsz=4096   blocks=0, rtextents=0</span><br></pre></td></tr></table></figure>
+
+<details>
+<summary>(참고) root는 ftyep=1이다</summary>
+<div markdown="1">
+
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">[root@master ~]<span class="comment"># xfs_info /</span></span><br><span class="line">meta-data=/dev/mapper/centos-root isize=512    agcount=4, agsize=406016 blks</span><br><span class="line">         =                       sectsz=512   attr=2, projid32bit=1</span><br><span class="line">         =                       crc=1        finobt=0 spinodes=0</span><br><span class="line">data     =                       bsize=4096   blocks=1624064, imaxpct=25</span><br><span class="line">         =                       sunit=0      swidth=0 blks</span><br><span class="line">naming   =version 2              bsize=4096   ascii-ci=0 ftype=1</span><br><span class="line"><span class="built_in">log</span>      =internal               bsize=4096   blocks=2560, version=2</span><br><span class="line">         =                       sectsz=512   sunit=0 blks, lazy-count=1</span><br><span class="line">realtime =none                   extsz=4096   blocks=0, rtextents=0</span><br></pre></td></tr></table></figure>
+
+</details>
+
+<h3 id="파일-삭제-후-동작-확인"><a href="#파일-삭제-후-동작-확인" class="headerlink" title="파일 삭제 후 동작 확인"></a>파일 삭제 후 동작 확인</h3><p>overlay 디렉토리에서 lower 디렉토리에 있는 파일을 삭제한 뒤 조회하면, 삭제했던 파일이 비정상적으로 조회된다.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">[root@master ftype0]<span class="comment"># mkdir overlay-test overlay-test/lower overlay-test/upper overlay-test/workdir overlay-test/overlay</span></span><br><span class="line">[root@master ftype0]<span class="comment"># cd overlay-test/</span></span><br><span class="line">[root@master overlay-test]<span class="comment"># touch lower/lower</span></span><br><span class="line">[root@master overlay-test]<span class="comment"># mount -t overlay -o lowerdir=/root/ftype0/overlay-test/lower,\</span></span><br><span class="line">&gt; upperdir=/root/ftype0/overlay-test/upper,workdir=/root/ftype0/overlay-test/workdir \</span><br><span class="line">&gt; none /root/ftype0/overlay-test/overlay</span><br><span class="line">[root@master overlay-test]<span class="comment"># ls -al overlay/</span></span><br><span class="line">합계 0</span><br><span class="line">drwxr-xr-x. 1 root root  6 12월  5 02:05 .</span><br><span class="line">drwxr-xr-x. 6 root root 58 12월  5 02:05 ..</span><br><span class="line">-rw-r--r--. 1 root root  0 12월  5 02:05 lower</span><br><span class="line">[root@master overlay-test]<span class="comment"># rm overlay/lower </span></span><br><span class="line"><span class="built_in">rm</span>: remove 일반 빈 파일 `overlay/lower<span class="string">&#x27;? y</span></span><br><span class="line"><span class="string">[root@master overlay-test]# ls -al overlay/</span></span><br><span class="line"><span class="string">ls: cannot access overlay/lower: 그런 파일이나 디렉터리가 없습니다</span></span><br><span class="line"><span class="string">합계 0</span></span><br><span class="line"><span class="string">drwxr-xr-x. 1 root root 18 12월  5 02:06 .</span></span><br><span class="line"><span class="string">drwxr-xr-x. 6 root root 58 12월  5 02:05 ..</span></span><br><span class="line"><span class="string">??????????? ? ?    ?     ?             ? lower</span></span><br></pre></td></tr></table></figure>
+
+
+<details>
+<summary> (참고) 정상 시나리오 - ftype=1인 디렉토리에서 overlayfs 동작 확인</summary>
+<div markdown="1">
+
+<p>삭제된 파일이 조회되지 않는다.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">[root@master ~]<span class="comment"># mkdir overlay-test overlay-test/lower overlay-test/upper overlay-test/workdir overlay-test/overlay</span></span><br><span class="line">[root@master ~]<span class="comment"># cd overlay-test/</span></span><br><span class="line">[root@master overlay-test]<span class="comment"># touch lower/lower</span></span><br><span class="line">[root@master overlay-test]<span class="comment"># mount -t overlay -o lowerdir=/root/overlay-test/lower,\</span></span><br><span class="line">&gt; upperdir=/root/overlay-test/upper,workdir=/root/overlay-test/workdir \</span><br><span class="line">&gt; none /root/overlay-test/overlay</span><br><span class="line">[root@master overlay-test]<span class="comment"># ls -al overlay/</span></span><br><span class="line">합계 0</span><br><span class="line">drwxr-xr-x. 1 root root  6 12월  5 02:01 .</span><br><span class="line">drwxr-xr-x. 6 root root 62 12월  5 02:01 ..</span><br><span class="line">-rw-r--r--. 1 root root  0 12월  5 02:01 lower</span><br><span class="line">[root@master overlay-test]<span class="comment"># rm overlay/lower </span></span><br><span class="line"><span class="built_in">rm</span>: remove 일반 빈 파일 `overlay/lower<span class="string">&#x27;? y</span></span><br><span class="line"><span class="string">[root@master overlay-test]# ls -al overlay/</span></span><br><span class="line"><span class="string">합계 0</span></span><br><span class="line"><span class="string">drwxr-xr-x. 1 root root 19 12월  5 02:02 .</span></span><br><span class="line"><span class="string">drwxr-xr-x. 6 root root 62 12월  5 02:01 ..</span></span><br></pre></td></tr></table></figure>
+
+</details>
+
+<h2 id="유관-프로젝트의-대처"><a href="#유관-프로젝트의-대처" class="headerlink" title="유관 프로젝트의 대처"></a>유관 프로젝트의 대처</h2><p>레드햇의 경우 xfs 파일시스템을 사용할 때 주의 사항을 <a target="_blank" rel="noopener" href="https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/7.2_release_notes/technology-preview-file_systems">문서</a>에 명시되어있고,<br>Docker 역시 overlayfs storage driver를 사용할 때 주의 사항이 <a target="_blank" rel="noopener" href="https://docs.docker.com/storage/storagedriver/overlayfs-driver/#prerequisites">공식 홈페이지</a>에 명시되어있다.</p>
+<p>이러한 버그가 알려져있기 때문에, docker와 cri-o에서는 앞서 소개했었던 fatal log 내용처럼 사전에 확인하는 과정을 추가한 것으로 보인다.</p>
+<h2 id="결론"><a href="#결론" class="headerlink" title="결론"></a>결론</h2><p>overlayfs의 backing filesystem으로 xfs 파일 시스템을 사용할 때는, xfs 포맷 시 ftype&#x3D;1을 반드시 추가하자.</p>
+
+    </div>
+
+    
+    
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- post-body-end -->
+<ins class="adsbygoogle"
+     style="display:block"
+     data-ad-client="ca-pub-2651093483415314"
+     data-ad-slot="8169778994"
+     data-ad-format="auto"
+     data-full-width-responsive="true"></ins>
+<script>
+     (adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/overlayfs/" rel="tag"># overlayfs</a>
+              <a href="/tags/xfs/" rel="tag"># xfs</a>
+              <a href="/tags/ftype/" rel="tag"># ftype</a>
+              <a href="/tags/d-type/" rel="tag"># d_type</a>
+              <a href="/tags/crio/" rel="tag"># crio</a>
+              <a href="/tags/docker/" rel="tag"># docker</a>
+              <a href="/tags/container/" rel="tag"># container</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2020/04/04/kubernetes-resource-mgmt-1-requests-and-limits/" rel="prev" title="Kubernetes의 resource 관리(1) - requests와 limits">
+      <i class="fa fa-chevron-left"></i> Kubernetes의 resource 관리(1) - requests와 limits
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/05/25/express-cannot-set-headers/" rel="next" title="[Express.js] Cannot set headers after they are sent to the client">
+      [Express.js] Cannot set headers after they are sent to the client <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    
+  <div class="comments">
+    <div id="disqus_thread">
+      <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+    </div>
+  </div>
+  
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%EB%AC%B8%EC%A0%9C-%EC%83%81%ED%99%A9"><span class="nav-number">1.</span> <span class="nav-text">문제 상황</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%EA%B4%80%EB%A0%A8-%EC%9D%B4%EC%8A%88-%ED%99%95%EC%9D%B8"><span class="nav-number">2.</span> <span class="nav-text">관련 이슈 확인</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%EB%B2%84%EA%B7%B8-%EC%9E%AC%ED%98%84"><span class="nav-number">3.</span> <span class="nav-text">버그 재현</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%ED%8C%8C%ED%8B%B0%EC%85%98-%EC%83%9D%EC%84%B1"><span class="nav-number">3.1.</span> <span class="nav-text">파티션 생성</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#xfs-%EC%83%9D%EC%84%B1"><span class="nav-number">3.2.</span> <span class="nav-text">xfs 생성</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#fstab%EC%97%90-mount-%EC%A0%95%EB%B3%B4-%EC%B6%94%EA%B0%80-%EB%B0%8F-%EC%A0%81%EC%9A%A9"><span class="nav-number">3.3.</span> <span class="nav-text">fstab에 mount 정보 추가 및 적용</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%ED%8C%8C%EC%9D%BC-%EC%82%AD%EC%A0%9C-%ED%9B%84-%EB%8F%99%EC%9E%91-%ED%99%95%EC%9D%B8"><span class="nav-number">3.4.</span> <span class="nav-text">파일 삭제 후 동작 확인</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%EC%9C%A0%EA%B4%80-%ED%94%84%EB%A1%9C%EC%A0%9D%ED%8A%B8%EC%9D%98-%EB%8C%80%EC%B2%98"><span class="nav-number">4.</span> <span class="nav-text">유관 프로젝트의 대처</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%EA%B2%B0%EB%A1%A0"><span class="nav-number">5.</span> <span class="nav-text">결론</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">Joowon Cheong</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">16</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">46</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Joowon Cheong</span>
+</div>
+  <div class="powered-by">Powered by <span class="exturl theme-link" data-url="aHR0cHM6Ly9oZXhvLmlv">Hexo</span> & <span class="exturl theme-link" data-url="aHR0cHM6Ly90aGVtZS1uZXh0Lm9yZw==">NexT.Gemini</span>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<script>
+  function loadCount() {
+    var d = document, s = d.createElement('script');
+    s.src = 'https://jwcheong0420-github-io.disqus.com/count.js';
+    s.id = 'dsq-count-scr';
+    (d.head || d.body).appendChild(s);
+  }
+  // defer loading until the whole page loading is completed
+  window.addEventListener('load', loadCount, false);
+</script>
+<script>
+  var disqus_config = function() {
+    this.page.url = "http://jwcheong0420.github.io/2020/12/05/overlayfs-bug-on-xfs-without-d-type-disabled/";
+    this.page.identifier = "2020/12/05/overlayfs-bug-on-xfs-without-d-type-disabled/";
+    this.page.title = "overlayfs 버그 - xfs 사용 시 ftype=0인 경우 파일 삭제 시 인식하지 못함";
+    };
+  NexT.utils.loadComments(document.querySelector('#disqus_thread'), () => {
+    if (window.DISQUS) {
+      DISQUS.reset({
+        reload: true,
+        config: disqus_config
+      });
+    } else {
+      var d = document, s = d.createElement('script');
+      s.src = 'https://jwcheong0420-github-io.disqus.com/embed.js';
+      s.setAttribute('data-timestamp', '' + +new Date());
+      (d.head || d.body).appendChild(s);
+    }
+  });
+</script>
+
+</body>
+</html>

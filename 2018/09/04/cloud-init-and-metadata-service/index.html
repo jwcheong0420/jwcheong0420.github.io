@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/binary-code-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/binary-code-16x16.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="StDZENpmNwniZsyIkPBwcXfybLbk5VZzl332sCeAln4">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Noto Sans KR:300,300italic,400,400italic,700,700italic|Nanum Gothic Coding:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"jwcheong0420.github.io","root":"/","scheme":"Gemini","version":"7.8.0","exturl":true,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":"mac"},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="이 모든 것은 windows vm을 회사의 cloud 환경에 띄우기 위해 시작되었다.이것을 하기 위해 cloud-init이 무엇인지 알게 되었고, 구글링하고 구글링하고 또 구글링하고…구글링했던 지난 날이 아까워서라도 남겨놔야겠다. cloud-initcloud-init은 vm을 datasource를 기반으로 초기화하기 위해 vm 내부에서 동작하는 프로그램이다">
+<meta property="og:type" content="article">
+<meta property="og:title" content="clout-init과 metadata service(feat.cloudbase-init)">
+<meta property="og:url" content="http://jwcheong0420.github.io/2018/09/04/cloud-init-and-metadata-service/index.html">
+<meta property="og:site_name" content="삽질특기생">
+<meta property="og:description" content="이 모든 것은 windows vm을 회사의 cloud 환경에 띄우기 위해 시작되었다.이것을 하기 위해 cloud-init이 무엇인지 알게 되었고, 구글링하고 구글링하고 또 구글링하고…구글링했던 지난 날이 아까워서라도 남겨놔야겠다. cloud-initcloud-init은 vm을 datasource를 기반으로 초기화하기 위해 vm 내부에서 동작하는 프로그램이다">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://jwcheong0420.github.io/images/cloud-init-and-metadata-service/cloud-init-working-process.png">
+<meta property="og:image" content="http://jwcheong0420.github.io/images/cloud-init-and-metadata-service/metadata-svc.png">
+<meta property="article:published_time" content="2018-09-04T05:20:03.000Z">
+<meta property="article:modified_time" content="2018-09-04T05:20:03.000Z">
+<meta property="article:author" content="Joowon Cheong">
+<meta property="article:tag" content="cloud-init">
+<meta property="article:tag" content="cloudbase-init">
+<meta property="article:tag" content="datasource">
+<meta property="article:tag" content="metadata">
+<meta property="article:tag" content="169.254.169.254">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://jwcheong0420.github.io/images/cloud-init-and-metadata-service/cloud-init-working-process.png">
+
+<link rel="canonical" href="http://jwcheong0420.github.io/2018/09/04/cloud-init-and-metadata-service/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'en'
+  };
+</script>
+<script data-ad-client="ca-pub-2651093483415314" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+  <title>clout-init과 metadata service(feat.cloudbase-init) | 삽질특기생</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">삽질특기생</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">다음에 삽질 덜하려고 만든 블로그</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://jwcheong0420.github.io/2018/09/04/cloud-init-and-metadata-service/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Joowon Cheong">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="삽질특기생">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          clout-init과 metadata service(feat.cloudbase-init)
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2018-09-04 14:20:03" itemprop="dateCreated datePublished" datetime="2018-09-04T14:20:03+09:00">2018-09-04</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/cloud/" itemprop="url" rel="index"><span itemprop="name">cloud</span></a>
+                </span>
+            </span>
+
+          
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus: </span>
+    
+    <a title="disqus" href="/2018/09/04/cloud-init-and-metadata-service/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2018/09/04/cloud-init-and-metadata-service/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>이 모든 것은 windows vm을 회사의 cloud 환경에 띄우기 위해 시작되었다.<br>이것을 하기 위해 cloud-init이 무엇인지 알게 되었고, 구글링하고 구글링하고 또 구글링하고…<br>구글링했던 지난 날이 아까워서라도 남겨놔야겠다.</p>
+<h2 id="cloud-init"><a href="#cloud-init" class="headerlink" title="cloud-init"></a>cloud-init</h2><p>cloud-init은 vm을 datasource를 기반으로 초기화하기 위해 vm 내부에서 동작하는 프로그램이다.<br>애석하게도 linux 계열의 guest OS만 지원하고, windows를 guest OS로 사용한다면 cloudbase-init을 설치해야 한다.<br>큰 뼈대는 cloud-init이나 cloudbase-init이나 동일하므로 cloud-init을 기준으로 설명하겠다.<br>(실제로도 cloudbase-init의 설명을 읽다보면 cloud-init을 기준으로 다른 점만 기술되어있는 느낌이다.)</p>
+<h3 id="datasource"><a href="#datasource" class="headerlink" title="datasource"></a>datasource</h3><p>datasource란 metadata와 userdata, 그리고 vendordata를 포함한 instance의 data를 의미한다.<br>metadata는 intstance 관리를 위해 cloud platform가 설정하는 정보로, instance id나 hostname, ssh-key 등을 설정할 수 있다.<br>userdata는 말그대로 사용자가 설정하는 데이터이고, user와 group, write_files, bootcmd&#x2F;runcmd 등을 설정할 수 있다.<br>vendordata는 cloud platform이 정하는 userdata 급의 data로, 그 항목은 userdata와 동일하다. 이 때 이를 사용하고 말고는 사용자가 결정한다.</p>
+<h4 id="datasource의-종류"><a href="#datasource의-종류" class="headerlink" title="datasource의 종류"></a>datasource의 종류</h4><p>이 datasource를 얻어오는 방법은 크게 두 가지인데, local로 얻어오는 방법과 network로 얻어오는 방법이다.<br>local로 얻어오는 방법은 datasource를 iso파일로 생성하여 instance에 삽입한 것을 읽어오는 것이고,<br>cloud-init에서 분류하는 datasource 종류 중 NoCloud(cloud platform을 사용하지 않는 경우를 의미하며 cloud-config format 사용), Config Drive(Openstack format 사용), Alt Cloud(RHEvm, vShpere) 등이 있다.<br>network로 얻어오는 방법은 cloud platform이 제공하는 metadata service를 통해 얻어오는 방법이며,<br>Openstack, EC2, GCE, Azure, Aliyun 등 cloud platform의 종류별로 cloud-init이 구분하고 있다.</p>
+<h3 id="cloud-init-동작-과정"><a href="#cloud-init-동작-과정" class="headerlink" title="cloud-init 동작 과정"></a>cloud-init 동작 과정</h3><p>cloud-init은 각 모듈이 systemd의 service로 등록되어 instance의 booting 과정 중에 실행된다.<br>모듈별 동작은 크게 의미 없으니 다음 그림처럼 굵직하게만 살펴보겠다.<br><img src="/images/cloud-init-and-metadata-service/cloud-init-working-process.png"></p>
+<h4 id="local-datasource-탐색-amp-network-configuration-결정"><a href="#local-datasource-탐색-amp-network-configuration-결정" class="headerlink" title="local datasource 탐색 &amp; network configuration 결정"></a>local datasource 탐색 &amp; network configuration 결정</h4><p>cloud-init이 실행되면 가장 우선적으로 local datasource를 탐색하고, 어떤 network configuration을 사용할 지 결정한다.<br>network configuration을 ‘결정’한다고 표현하는 것은, cloud-init은 netplan(ubuntu 18.04 기준)과 같은 네트워크 서비스에 설정을 집어넣는 역할까지만 하기 때문이다.<br>실제 network configure는 guest os의 네트워크 서비스가 해준다.<br>만약 local datasource가 존재하지 않는다면 fallback 로직을 타게 되는데, cloud-init에서는 이를 dhcp로 규정하고 있다.<br>사용자가 원하지 않는다면 cloud-init의 network configuration을 disable할 수도 있다.<br>이렇게 cloud-init이 결정한 network configuration을 바탕으로 guest os의 네트워크 서비스가 세팅을 해준 뒤에 cloud-init는 다음 작업을 수행한다.</p>
+<h4 id="network-datasource-검색"><a href="#network-datasource-검색" class="headerlink" title="network datasource 검색"></a>network datasource 검색</h4><p>local datasource가 있었다면 static이던 dhcp던 네트워크가 설정된 후 이 과정은 패스할 것이고,<br>local datasource가 없었다면 dhcp로 네트워크가 설정된 후 이 과정을 진행할 것이다.<br>cloud-init의 소스에는 datasource 종류별로 어떤 metadata service를 사용할 지 하드코딩되어있다.<br>(하드코딩이라도 표현해도 될지는 잘 모르겠다. 무튼 요지는 cloud-init이 지원하는 platform의 metadata service만 사용 가능하다는 점이다.)<br>이 부분은 잠시 뒤 metadata service에서 자세히 다뤄보겠다.</p>
+<h4 id="instance-초기화-진행"><a href="#instance-초기화-진행" class="headerlink" title="instance 초기화 진행"></a>instance 초기화 진행</h4><p>이제 얻어온 datasource를 바탕으로 instance를 초기화한다.</p>
+<p>이와 같은 과정을 거쳐 cloud-init은 vm을 personalize한다.<br>이제 cloud-init을 설명하면서 여러 차례 언급되었던 metadata service에 대해 알아보자.</p>
+<h2 id="metadata-service"><a href="#metadata-service" class="headerlink" title="metadata service"></a>metadata service</h2><p>metadata service는 instance를 관리하는 데에 필요한 정보를 검색하는 서비스이다.<br>cloud-init이 이 서비스를 instance를 초기화할 때 사용하는 대표적인 예일 뿐, 사용자도 해당 서비스를 사용하여 instance의 metadata를 조회할 수 있다.</p>
+<h3 id="metadata-service-사용-방법"><a href="#metadata-service-사용-방법" class="headerlink" title="metadata service 사용 방법"></a>metadata service 사용 방법</h3><p>이 서비스는 rest api로 제공되는데, cloud platform별로 사용 방법이 다르다.<br><img src="/images/cloud-init-and-metadata-service/metadata-svc.png"><br>openstack의 경우 metadata를 파일로 한 번에 리턴해주지만, 대부분의 플랫폼은 metadata 항목마다 request를 보내어 그 값을 리턴받는다.<br>사용 방법은 각 공홈에 나와있는데, 대표적으로 <a target="_blank" rel="noopener" href="https://docs.aws.amazon.com/ko_kr/AWSEC2/latest/UserGuide/ec2-instance-metadata.html">ec2의 metadata service 사용방법</a>을 읽어보면 감이 올 것이다.<br>여기에서 내가 궁금했던 것이 두 가지 있는데, 첫 번째는 openstack와 ec2의 metadata service는 왜 169.254.169.254를 사용하는가?였다.<br>이것은 GCE와 Aliyun은 저 ip를 사용하지 않는다는 것을 몰랐을 때 생긴 궁금증이라, 저 ip에 꽂혀서 삽질했던 지난 날을 생각하면… (부들부들)<br>그리고 두 번째는 이 http request에는 instance에 대한 아무런 정보도 없는데 metadata service가 이 instance specific한 어떻게 돌려주는가?였다.<br>우선 두 번째 의문부터 풀어보도록 하자.</p>
+<h3 id="openstack의-metadata-service-동작-과정"><a href="#openstack의-metadata-service-동작-과정" class="headerlink" title="openstack의 metadata service 동작 과정"></a>openstack의 metadata service 동작 과정</h3><p>instance를 특정짓는 과정을 알아보기 위해서는 metadata service가 어떤 방식으로 돌아가는 지 알 필요가 있다.<br>모든 플랫폼을 다 살펴볼 순 없으므로 openstack을 기준으로 조사를 했다.</p>
+<p>(작성중…)</p>
+
+    </div>
+
+    
+    
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- post-body-end -->
+<ins class="adsbygoogle"
+     style="display:block"
+     data-ad-client="ca-pub-2651093483415314"
+     data-ad-slot="8169778994"
+     data-ad-format="auto"
+     data-full-width-responsive="true"></ins>
+<script>
+     (adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/cloud-init/" rel="tag"># cloud-init</a>
+              <a href="/tags/cloudbase-init/" rel="tag"># cloudbase-init</a>
+              <a href="/tags/datasource/" rel="tag"># datasource</a>
+              <a href="/tags/metadata/" rel="tag"># metadata</a>
+              <a href="/tags/169-254-169-254/" rel="tag"># 169.254.169.254</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2018/08/09/how-to-install-k8s/" rel="prev" title="k8s 설치 방법">
+      <i class="fa fa-chevron-left"></i> k8s 설치 방법
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2019/12/19/push-image-to-private-registry/" rel="next" title="Docker private registry에 image push하기">
+      Docker private registry에 image push하기 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    
+  <div class="comments">
+    <div id="disqus_thread">
+      <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+    </div>
+  </div>
+  
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#cloud-init"><span class="nav-number">1.</span> <span class="nav-text">cloud-init</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#datasource"><span class="nav-number">1.1.</span> <span class="nav-text">datasource</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#datasource%EC%9D%98-%EC%A2%85%EB%A5%98"><span class="nav-number">1.1.1.</span> <span class="nav-text">datasource의 종류</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#cloud-init-%EB%8F%99%EC%9E%91-%EA%B3%BC%EC%A0%95"><span class="nav-number">1.2.</span> <span class="nav-text">cloud-init 동작 과정</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#local-datasource-%ED%83%90%EC%83%89-amp-network-configuration-%EA%B2%B0%EC%A0%95"><span class="nav-number">1.2.1.</span> <span class="nav-text">local datasource 탐색 &amp; network configuration 결정</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#network-datasource-%EA%B2%80%EC%83%89"><span class="nav-number">1.2.2.</span> <span class="nav-text">network datasource 검색</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#instance-%EC%B4%88%EA%B8%B0%ED%99%94-%EC%A7%84%ED%96%89"><span class="nav-number">1.2.3.</span> <span class="nav-text">instance 초기화 진행</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#metadata-service"><span class="nav-number">2.</span> <span class="nav-text">metadata service</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#metadata-service-%EC%82%AC%EC%9A%A9-%EB%B0%A9%EB%B2%95"><span class="nav-number">2.1.</span> <span class="nav-text">metadata service 사용 방법</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#openstack%EC%9D%98-metadata-service-%EB%8F%99%EC%9E%91-%EA%B3%BC%EC%A0%95"><span class="nav-number">2.2.</span> <span class="nav-text">openstack의 metadata service 동작 과정</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">Joowon Cheong</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">16</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">46</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Joowon Cheong</span>
+</div>
+  <div class="powered-by">Powered by <span class="exturl theme-link" data-url="aHR0cHM6Ly9oZXhvLmlv">Hexo</span> & <span class="exturl theme-link" data-url="aHR0cHM6Ly90aGVtZS1uZXh0Lm9yZw==">NexT.Gemini</span>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<script>
+  function loadCount() {
+    var d = document, s = d.createElement('script');
+    s.src = 'https://jwcheong0420-github-io.disqus.com/count.js';
+    s.id = 'dsq-count-scr';
+    (d.head || d.body).appendChild(s);
+  }
+  // defer loading until the whole page loading is completed
+  window.addEventListener('load', loadCount, false);
+</script>
+<script>
+  var disqus_config = function() {
+    this.page.url = "http://jwcheong0420.github.io/2018/09/04/cloud-init-and-metadata-service/";
+    this.page.identifier = "2018/09/04/cloud-init-and-metadata-service/";
+    this.page.title = "clout-init과 metadata service(feat.cloudbase-init)";
+    };
+  NexT.utils.loadComments(document.querySelector('#disqus_thread'), () => {
+    if (window.DISQUS) {
+      DISQUS.reset({
+        reload: true,
+        config: disqus_config
+      });
+    } else {
+      var d = document, s = d.createElement('script');
+      s.src = 'https://jwcheong0420-github-io.disqus.com/embed.js';
+      s.setAttribute('data-timestamp', '' + +new Date());
+      (d.head || d.body).appendChild(s);
+    }
+  });
+</script>
+
+</body>
+</html>

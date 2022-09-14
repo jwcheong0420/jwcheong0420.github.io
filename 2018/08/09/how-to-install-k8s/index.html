@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/binary-code-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/binary-code-16x16.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="StDZENpmNwniZsyIkPBwcXfybLbk5VZzl332sCeAln4">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Noto Sans KR:300,300italic,400,400italic,700,700italic|Nanum Gothic Coding:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"jwcheong0420.github.io","root":"/","scheme":"Gemini","version":"7.8.0","exturl":true,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":"mac"},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="k8s의 pod에 대해 조사를 해야하는 일이 생겨서 개인 컴퓨터에 k8s를 설치해보았다.원래 k8s는 세 대 이상의 클러스터에 구성할 것을 권장하는 것으로 알고 있지만 나는 테스트용이므로 한 대로만 구성하였다.k8s가 무엇인지 간략하게 알아보고, 설치 과정에 대해 기술하도록 하겠다. kubernetes란kubernete(k8s)는 docker orchetr">
+<meta property="og:type" content="article">
+<meta property="og:title" content="k8s 설치 방법">
+<meta property="og:url" content="http://jwcheong0420.github.io/2018/08/09/how-to-install-k8s/index.html">
+<meta property="og:site_name" content="삽질특기생">
+<meta property="og:description" content="k8s의 pod에 대해 조사를 해야하는 일이 생겨서 개인 컴퓨터에 k8s를 설치해보았다.원래 k8s는 세 대 이상의 클러스터에 구성할 것을 권장하는 것으로 알고 있지만 나는 테스트용이므로 한 대로만 구성하였다.k8s가 무엇인지 간략하게 알아보고, 설치 과정에 대해 기술하도록 하겠다. kubernetes란kubernete(k8s)는 docker orchetr">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2018-08-09T09:38:15.000Z">
+<meta property="article:modified_time" content="2018-08-09T09:38:15.000Z">
+<meta property="article:author" content="Joowon Cheong">
+<meta property="article:tag" content="kubernetes">
+<meta property="article:tag" content="k8s">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://jwcheong0420.github.io/2018/08/09/how-to-install-k8s/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'en'
+  };
+</script>
+<script data-ad-client="ca-pub-2651093483415314" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+  <title>k8s 설치 방법 | 삽질특기생</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">삽질특기생</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">다음에 삽질 덜하려고 만든 블로그</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://jwcheong0420.github.io/2018/08/09/how-to-install-k8s/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Joowon Cheong">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="삽질특기생">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          k8s 설치 방법
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2018-08-09 18:38:15" itemprop="dateCreated datePublished" datetime="2018-08-09T18:38:15+09:00">2018-08-09</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/cloud/" itemprop="url" rel="index"><span itemprop="name">cloud</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/cloud/k8s/" itemprop="url" rel="index"><span itemprop="name">k8s</span></a>
+                </span>
+            </span>
+
+          
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus: </span>
+    
+    <a title="disqus" href="/2018/08/09/how-to-install-k8s/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2018/08/09/how-to-install-k8s/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>k8s의 pod에 대해 조사를 해야하는 일이 생겨서 개인 컴퓨터에 k8s를 설치해보았다.<br>원래 k8s는 세 대 이상의 클러스터에 구성할 것을 권장하는 것으로 알고 있지만 나는 테스트용이므로 한 대로만 구성하였다.<br>k8s가 무엇인지 간략하게 알아보고, 설치 과정에 대해 기술하도록 하겠다.</p>
+<h2 id="kubernetes란"><a href="#kubernetes란" class="headerlink" title="kubernetes란"></a>kubernetes란</h2><p>kubernete(k8s)는 docker orchetration tool로, application container의 deploy, scaling, operating 자동화를 위한 플랫폼이다.<br>쉽게 설명하자면 k8s는 사용자가 기대하는 상태로 동작하도록 application을 생성하고 실행 상태를 유지하는 것이 목적이라고 할 수 있다.<br>k8s는 여러 노드를 하나의 클러스터로 관리하는데, 하나의 master node와 그 외 여러 일반 node로 구성된다. <del>일반 node는 minions라고도 불리는 모양이다.(미니언즈라니…귀여워…)</del><br>master node에는 클러스터를 관리하는 목적의 controller pod들이 실행되어야 한다.<br>일반 node들은 kubelet 데몬과 docker 데몬이 실행되고 있어야 하며, container의 묶음인 pod들이 실행되는 형태이다.</p>
+<blockquote>
+<p>20&#x2F;04&#x2F;06 수정<br>minion이라고 불렸던 것은 아주 오래전의 얘기인 것 같다. 이 <a target="_blank" rel="noopener" href="https://github.com/kubernetes/kubernetes/issues/1111">github issue</a>에서 minion이라는 용어가 헷갈리므로 변경하자는 의견이 오고 갔다.</p>
+</blockquote>
+<h2 id="k8s-설치-방법"><a href="#k8s-설치-방법" class="headerlink" title="k8s 설치 방법"></a>k8s 설치 방법</h2><h3 id="docker-설치"><a href="#docker-설치" class="headerlink" title="docker 설치"></a>docker 설치</h3><p>우선 k8s가 docker 기반의 container를 관리하므로, docker를 설치해야한다.<br>나는 이미 설치되어있어서 해당 과정을 생략했는데, <a target="_blank" rel="noopener" href="https://docs.docker.com/install/linux/docker-ce/ubuntu/#install-using-the-repository">docker 공식 홈페이지의 설치 방법</a>을 참고하여 설치하면 된다.</p>
+<h3 id="k8s-설치"><a href="#k8s-설치" class="headerlink" title="k8s 설치"></a>k8s 설치</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">$ curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add</span><br><span class="line">$ vi /etc/apt/sources.list.d/kubernetes.list</span><br><span class="line">deb http://apt.kubernetes.io/ kubernetes-xenial main</span><br><span class="line">$ apt-get update</span><br><span class="line">$ apt-get install --no-install-recommends kubelet kubeadm kubernetes-cni</span><br></pre></td></tr></table></figure>
+<p>패키지 설치 시 –no-install-recommends 옵션은 해당 패지키가 실행되는 데 필요한 패키지만을 설치하겠다는 옵션이다.<br>잡다한 패키지까지 설치하는 게 싫어서 나는 항상 이 옵션을 주고 설치하는데, 저 옵션 없이 설치해도 무방하다.</p>
+<h3 id="kubelet-설정"><a href="#kubelet-설정" class="headerlink" title="kubelet 설정"></a>kubelet 설정</h3><p>swap 설정을 해주어야 한다.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">$ sed -i <span class="string">&#x27;9s/^/Environment=&quot;KUBELET_EXTRA_ARGS=--fail-swap-on=false&quot;\n/&#x27;</span> /etc/systemd/system/kubelet.service.d/10-kubeadm.conf</span><br><span class="line">$ systemctl daemon-reload</span><br><span class="line">$ systemctl restart kubelet</span><br></pre></td></tr></table></figure>
+
+<h3 id="master-init"><a href="#master-init" class="headerlink" title="master init"></a>master init</h3><h4 id="kubeadm-init"><a href="#kubeadm-init" class="headerlink" title="kubeadm init"></a>kubeadm init</h4><p>kubeadm을 init해야한다.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ kubeadm init --pod-network-cidr=10.244.0.0/16 --ignore-preflight-errors Swap</span><br></pre></td></tr></table></figure>
+<p>–pod-network-cidr&#x3D;10.244.0.0&#x2F;16은 flannel을 사용하기 위한 옵션이고, –ignore-preflight-errors Swap은 swap 에러를 무시하기 위한 옵션이다.<br>위 커맨드를 실행하면 To start using your cluster라며 아래와 같은 커맨드가 나열될 것이다.<br>하라는 대로 따라 치면 되겠다.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">$ <span class="built_in">mkdir</span> -p <span class="variable">$HOME</span>/.kube</span><br><span class="line">$ <span class="built_in">cp</span> -i /etc/kubernetes/admin.conf <span class="variable">$HOME</span>/.kube/config</span><br><span class="line">$ <span class="built_in">chown</span> $(<span class="built_in">id</span> -u):$(<span class="built_in">id</span> -g) <span class="variable">$HOME</span>/.kube/config</span><br></pre></td></tr></table></figure>
+
+<h4 id="flannel-적용"><a href="#flannel-적용" class="headerlink" title="flannel 적용"></a>flannel 적용</h4><p>보통 pod의 network로 flannel을 많이 사용한다.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/v0.9.1/Documentation/kube-flannel.yml</span><br></pre></td></tr></table></figure>
+
+<h4 id="master-node에-schedule-가능하도록-설정"><a href="#master-node에-schedule-가능하도록-설정" class="headerlink" title="master node에 schedule 가능하도록 설정"></a>master node에 schedule 가능하도록 설정</h4><p>원래 master node에는 schedule하지 않는 것이 default 설정이다. 즉 master node에는 별도의 설정이 없으면 pod이 뜨지 않는다.<br>현재 나의 테스트 환경은 single-node cluster이므로, master에 schedule이 가능하도록 설정을 바꿔야 한다.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ kubectl taint nodes --all node-role.kubernetes.io/master-</span><br></pre></td></tr></table></figure>
+<p>결과로 node ‘&lt;hostname&gt;‘ untainted가 나오면 성공이다.</p>
+<h2 id="trouble-shooting"><a href="#trouble-shooting" class="headerlink" title="trouble shooting"></a>trouble shooting</h2><h3 id="reboot시-node-not-ready-에러-발생"><a href="#reboot시-node-not-ready-에러-발생" class="headerlink" title="reboot시 node not ready 에러 발생"></a>reboot시 node not ready 에러 발생</h3><p>reboot 시 node not ready 에러가 발생했다.<br>에러는 다음과 같은 커맨드로 node 정보를 조회하여 확인하였고, 여기서 dev는 node 이름이다.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ kubectl describe node dev</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>Ready            False   Tue, 15 May 2018 10:35:18 +0900   Tue, 15 May 2018 10:26:25 +0900   KubeletNotReady              runtime network not ready: NetworkReady&#x3D;false reason:NetworkPluginNotReady message:docker: network plugin is not ready: cni config uninitialized</p>
+</blockquote>
+<p>&#x2F;etc&#x2F;systemd&#x2F;system&#x2F;10-kubeadm.conf에서 KUBELET_NETWORK_ARGS line을 삭제했더니 정상 동작하였다.<br>해당 과정은 <a target="_blank" rel="noopener" href="https://github.com/kubernetes/kubernetes/issues/48798">kubernetes github</a>을 참고하였다.</p>
+<h3 id="swap-에러-발생"><a href="#swap-에러-발생" class="headerlink" title="swap 에러 발생"></a>swap 에러 발생</h3><p>master init 과정에서 다음 커맨드를 실행했을 때 swap을 disable하지 않았다며 에러가 발생했다.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ kubeadm init</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>[ERROR Swap]: running with swap on is not supported. Please disable swap<br>[preflight] If you know what you are doing, you can make a check non-fatal with <code>--ignore-preflight-errors=...</code></p>
+</blockquote>
+<p>위의 kubelet 설정 방법대로 따라하고, kubeadm init시 swap error를 ignore하는 설정을 잊지 않도록 한다.</p>
+<h2 id="마무리"><a href="#마무리" class="headerlink" title="마무리"></a>마무리</h2><p>이 포스팅에서는 k8s를 설치하는 방법에 대해서 알아보았다.<br>시작이 반이라지만 k8s를 설치한 것만으로 반을 했다고 볼 수는 없다ㅋㅋㅋ<br>k8s를 제대로 사용하려면 pod도 알아야하고 service와 deployment 등등 알아야할 것이 산더미이다.<br>시간이 되는 대로 내가 조사한 것에 대해 포스팅을 해야겠다.</p>
+
+    </div>
+
+    
+    
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- post-body-end -->
+<ins class="adsbygoogle"
+     style="display:block"
+     data-ad-client="ca-pub-2651093483415314"
+     data-ad-slot="8169778994"
+     data-ad-format="auto"
+     data-full-width-responsive="true"></ins>
+<script>
+     (adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/kubernetes/" rel="tag"># kubernetes</a>
+              <a href="/tags/k8s/" rel="tag"># k8s</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2018/06/26/aws-s3-how-to-put-bucket-cors-by-awscli/" rel="prev" title="AWS S3에서 bucket의 cors를 활성화하는 방법(awscli 사용)">
+      <i class="fa fa-chevron-left"></i> AWS S3에서 bucket의 cors를 활성화하는 방법(awscli 사용)
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2018/09/04/cloud-init-and-metadata-service/" rel="next" title="clout-init과 metadata service(feat.cloudbase-init)">
+      clout-init과 metadata service(feat.cloudbase-init) <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    
+  <div class="comments">
+    <div id="disqus_thread">
+      <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+    </div>
+  </div>
+  
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#kubernetes%EB%9E%80"><span class="nav-number">1.</span> <span class="nav-text">kubernetes란</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#k8s-%EC%84%A4%EC%B9%98-%EB%B0%A9%EB%B2%95"><span class="nav-number">2.</span> <span class="nav-text">k8s 설치 방법</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#docker-%EC%84%A4%EC%B9%98"><span class="nav-number">2.1.</span> <span class="nav-text">docker 설치</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#k8s-%EC%84%A4%EC%B9%98"><span class="nav-number">2.2.</span> <span class="nav-text">k8s 설치</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#kubelet-%EC%84%A4%EC%A0%95"><span class="nav-number">2.3.</span> <span class="nav-text">kubelet 설정</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#master-init"><span class="nav-number">2.4.</span> <span class="nav-text">master init</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#kubeadm-init"><span class="nav-number">2.4.1.</span> <span class="nav-text">kubeadm init</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#flannel-%EC%A0%81%EC%9A%A9"><span class="nav-number">2.4.2.</span> <span class="nav-text">flannel 적용</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#master-node%EC%97%90-schedule-%EA%B0%80%EB%8A%A5%ED%95%98%EB%8F%84%EB%A1%9D-%EC%84%A4%EC%A0%95"><span class="nav-number">2.4.3.</span> <span class="nav-text">master node에 schedule 가능하도록 설정</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#trouble-shooting"><span class="nav-number">3.</span> <span class="nav-text">trouble shooting</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#reboot%EC%8B%9C-node-not-ready-%EC%97%90%EB%9F%AC-%EB%B0%9C%EC%83%9D"><span class="nav-number">3.1.</span> <span class="nav-text">reboot시 node not ready 에러 발생</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#swap-%EC%97%90%EB%9F%AC-%EB%B0%9C%EC%83%9D"><span class="nav-number">3.2.</span> <span class="nav-text">swap 에러 발생</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%EB%A7%88%EB%AC%B4%EB%A6%AC"><span class="nav-number">4.</span> <span class="nav-text">마무리</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">Joowon Cheong</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">16</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">46</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Joowon Cheong</span>
+</div>
+  <div class="powered-by">Powered by <span class="exturl theme-link" data-url="aHR0cHM6Ly9oZXhvLmlv">Hexo</span> & <span class="exturl theme-link" data-url="aHR0cHM6Ly90aGVtZS1uZXh0Lm9yZw==">NexT.Gemini</span>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<script>
+  function loadCount() {
+    var d = document, s = d.createElement('script');
+    s.src = 'https://jwcheong0420-github-io.disqus.com/count.js';
+    s.id = 'dsq-count-scr';
+    (d.head || d.body).appendChild(s);
+  }
+  // defer loading until the whole page loading is completed
+  window.addEventListener('load', loadCount, false);
+</script>
+<script>
+  var disqus_config = function() {
+    this.page.url = "http://jwcheong0420.github.io/2018/08/09/how-to-install-k8s/";
+    this.page.identifier = "2018/08/09/how-to-install-k8s/";
+    this.page.title = "k8s 설치 방법";
+    };
+  NexT.utils.loadComments(document.querySelector('#disqus_thread'), () => {
+    if (window.DISQUS) {
+      DISQUS.reset({
+        reload: true,
+        config: disqus_config
+      });
+    } else {
+      var d = document, s = d.createElement('script');
+      s.src = 'https://jwcheong0420-github-io.disqus.com/embed.js';
+      s.setAttribute('data-timestamp', '' + +new Date());
+      (d.head || d.body).appendChild(s);
+    }
+  });
+</script>
+
+</body>
+</html>

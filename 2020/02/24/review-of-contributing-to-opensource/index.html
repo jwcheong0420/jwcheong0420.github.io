@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/binary-code-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/binary-code-16x16.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="StDZENpmNwniZsyIkPBwcXfybLbk5VZzl332sCeAln4">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Noto Sans KR:300,300italic,400,400italic,700,700italic|Nanum Gothic Coding:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"jwcheong0420.github.io","root":"/","scheme":"Gemini","version":"7.8.0","exturl":true,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":"mac"},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="오픈소스에서 버그나 오타를 발견하는 건 사막에서 바늘 찾기라고만 생각했다.그래서 오픈소스에 컨트리뷰트하는 건 나한테는 불가능한 일이고, 대단한 사람들만 하는 것이라고 생각했다.그런데 나에게도 그런 일이 일어났다. 토요일 아침 7시에 오타를 발견하다답답함에 못이겼는지 토요일인데도 아침 일찍 눈이 번쩍 떠졌다.나에게 주어진 일이나 잘하자 하고 마음을 다잡으며">
+<meta property="og:type" content="article">
+<meta property="og:title" content="opensource에 contribute한 후기">
+<meta property="og:url" content="http://jwcheong0420.github.io/2020/02/24/review-of-contributing-to-opensource/index.html">
+<meta property="og:site_name" content="삽질특기생">
+<meta property="og:description" content="오픈소스에서 버그나 오타를 발견하는 건 사막에서 바늘 찾기라고만 생각했다.그래서 오픈소스에 컨트리뷰트하는 건 나한테는 불가능한 일이고, 대단한 사람들만 하는 것이라고 생각했다.그런데 나에게도 그런 일이 일어났다. 토요일 아침 7시에 오타를 발견하다답답함에 못이겼는지 토요일인데도 아침 일찍 눈이 번쩍 떠졌다.나에게 주어진 일이나 잘하자 하고 마음을 다잡으며">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://jwcheong0420.github.io/images/review-of-contributing-to-opensource/found-typo.png">
+<meta property="og:image" content="http://jwcheong0420.github.io/images/review-of-contributing-to-opensource/readme.png">
+<meta property="og:image" content="http://jwcheong0420.github.io/images/review-of-contributing-to-opensource/contributing.png">
+<meta property="og:image" content="http://jwcheong0420.github.io/images/review-of-contributing-to-opensource/first-commit.png">
+<meta property="og:image" content="http://jwcheong0420.github.io/images/review-of-contributing-to-opensource/first-pull-request.png">
+<meta property="og:image" content="http://jwcheong0420.github.io/images/review-of-contributing-to-opensource/pull-request-closed.png">
+<meta property="og:image" content="http://jwcheong0420.github.io/images/review-of-contributing-to-opensource/gitlab-where-is-fork-button.png">
+<meta property="og:image" content="http://jwcheong0420.github.io/images/review-of-contributing-to-opensource/gitlab-after-login.png">
+<meta property="og:image" content="http://jwcheong0420.github.io/images/review-of-contributing-to-opensource/merge-request-gitlab.png">
+<meta property="og:image" content="http://jwcheong0420.github.io/images/review-of-contributing-to-opensource/commit-more.png">
+<meta property="og:image" content="http://jwcheong0420.github.io/images/review-of-contributing-to-opensource/contributors.png">
+<meta property="article:published_time" content="2020-02-23T16:00:08.000Z">
+<meta property="article:modified_time" content="2020-02-23T16:00:08.000Z">
+<meta property="article:author" content="Joowon Cheong">
+<meta property="article:tag" content="opensource contribute">
+<meta property="article:tag" content="opensource">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://jwcheong0420.github.io/images/review-of-contributing-to-opensource/found-typo.png">
+
+<link rel="canonical" href="http://jwcheong0420.github.io/2020/02/24/review-of-contributing-to-opensource/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'en'
+  };
+</script>
+<script data-ad-client="ca-pub-2651093483415314" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+  <title>opensource에 contribute한 후기 | 삽질특기생</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">삽질특기생</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">다음에 삽질 덜하려고 만든 블로그</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://jwcheong0420.github.io/2020/02/24/review-of-contributing-to-opensource/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Joowon Cheong">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="삽질특기생">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          opensource에 contribute한 후기
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2020-02-24 01:00:08" itemprop="dateCreated datePublished" datetime="2020-02-24T01:00:08+09:00">2020-02-24</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/etc/" itemprop="url" rel="index"><span itemprop="name">etc</span></a>
+                </span>
+            </span>
+
+          
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus: </span>
+    
+    <a title="disqus" href="/2020/02/24/review-of-contributing-to-opensource/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2020/02/24/review-of-contributing-to-opensource/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>오픈소스에서 버그나 오타를 발견하는 건 사막에서 바늘 찾기라고만 생각했다.<br>그래서 오픈소스에 컨트리뷰트하는 건 나한테는 불가능한 일이고, 대단한 사람들만 하는 것이라고 생각했다.<br>그런데 나에게도 그런 일이 일어났다.</p>
+<h2 id="토요일-아침-7시에-오타를-발견하다"><a href="#토요일-아침-7시에-오타를-발견하다" class="headerlink" title="토요일 아침 7시에 오타를 발견하다"></a>토요일 아침 7시에 오타를 발견하다</h2><p>답답함에 못이겼는지 토요일인데도 아침 일찍 눈이 번쩍 떠졌다.<br>나에게 주어진 일이나 잘하자 하고 마음을 다잡으며 nvidia의 gpu device plugin 코드를 분석하려 했는데, 우연찮게 오타를 발견했다!<br><img src="/images/review-of-contributing-to-opensource/found-typo.png" alt="found-typo">  </p>
+<p>healtheck라니, healtheck라니!<br>혹시나 내가 healthcheck라고 잘못 알고 있었나 별 생각을 다하면서, 저 부분을 몇 번이고 다시 읽고 구글링도 해보았다ㅋㅋㅋㅋㅋ<br>생각보다 꽤 잘 오타가 나는 부분인지, healthcheck를 여러 번 타이핑할 때 healtheck라고 한 번씩 등장하는 모습을 볼 수 있었다.<br>일단 해보자! 만약 오타가 아니라면 PR(Pull Request)가 받아들여지지 않거나 하겠지. 라는 생각으로 나의 첫 오픈소스 컨트리뷰트 도전이 시작되었다.</p>
+<h2 id="Contribute-1차-시도"><a href="#Contribute-1차-시도" class="headerlink" title="Contribute 1차 시도"></a>Contribute 1차 시도</h2><h3 id="README-md-및-CONTRIBUTING-md-읽기"><a href="#README-md-및-CONTRIBUTING-md-읽기" class="headerlink" title="README.md 및 CONTRIBUTING.md 읽기"></a>README.md 및 CONTRIBUTING.md 읽기</h3><p>우선 오픈소스의 README와 CONTRIBUTING 문서를 살펴보았다.<br>README에는 CONTRIBUTING 문서를 살펴보고 PR로 컨트리뷰트하면 된다는 짤막한 문구가 있었고,<br><img src="/images/review-of-contributing-to-opensource/readme.png" alt="README - contributing"><br>CONTRIBUTING에는 오픈소스에 제출한 나의 코드에 대한 권리(<a target="_blank" rel="noopener" href="https://developercertificate.org/">정확한 내용</a>은 모르겠다…)에 대해 commit message에 내 실명을 넣은 한 줄을 추가하면 된단다.<br><img src="/images/review-of-contributing-to-opensource/contributing.png" alt="CONTRIBUTING - sign off"></p>
+<h3 id="오픈소스-프로젝트-fork하여-작업하기"><a href="#오픈소스-프로젝트-fork하여-작업하기" class="headerlink" title="오픈소스 프로젝트 fork하여 작업하기"></a>오픈소스 프로젝트 fork하여 작업하기</h3><p>해당 오픈소스의 github 프로젝트를 fork하고, fix-typo라는 브랜치를 따서 작업했다.<br>규칙대로 commit message에는 sign off 한 줄 추가 완료!<br><img src="/images/review-of-contributing-to-opensource/first-commit.png" alt="first commit"></p>
+<h3 id="Pull-Request를-올렸다"><a href="#Pull-Request를-올렸다" class="headerlink" title="Pull Request를 올렸다!"></a>Pull Request를 올렸다!</h3><p>PR을 올리고 얼마나 두근대던지, 테스팅 파이프라인을 계속 쳐다보고 별 쇼를 다했다ㅋㅋㅋㅋ<br>그리고 PR을 올리니까 내 contribution activity에 이런 이력도 추가되었다 :)<br><img src="/images/review-of-contributing-to-opensource/first-pull-request.png" alt="first pull request"></p>
+<h3 id="읭-Merged가-아니라-왜-Closed냐옹"><a href="#읭-Merged가-아니라-왜-Closed냐옹" class="headerlink" title="읭 Merged가 아니라 왜 Closed냐옹"></a>읭 Merged가 아니라 왜 Closed냐옹</h3><p>30여분 지났는데 해당 오픈소스 collaborator가 답변을 달았다.<br>꽤나 빠른 응답시간에 놀랐고, 답변에 당황했다.<br><img src="/images/review-of-contributing-to-opensource/pull-request-closed.png" alt="pull request closed"><br>github은 gitlab의 것을 mirror한 것이니, gitlab에 다시 해달란다.<br>어… gitlab으로 오픈소스 컨트리뷰트하는 후기들은 못봤는디요… 등에서 식은땀이 흘렀다.</p>
+<h2 id="Contribute-2차-시도"><a href="#Contribute-2차-시도" class="headerlink" title="Contribute 2차 시도"></a>Contribute 2차 시도</h2><h3 id="gitlab-가입하기"><a href="#gitlab-가입하기" class="headerlink" title="gitlab 가입하기"></a>gitlab 가입하기</h3><p>구글링해보니 gitlab의 프로젝트를 github으로 옮기는 케이스는 꽤 많은 것 같았다.<br>우선 gitlab에는 회사 메일로 된 계정밖에 없어서 이 기회에 만들었다.<br>혹시 모르니 github과 동일한 아이디와 메일을 사용하도록 가입했다.</p>
+<h3 id="오픈소스-프로젝트-fork하여-작업하고-MR-올리기"><a href="#오픈소스-프로젝트-fork하여-작업하고-MR-올리기" class="headerlink" title="오픈소스 프로젝트 fork하여 작업하고, MR 올리기"></a>오픈소스 프로젝트 fork하여 작업하고, MR 올리기</h3><p>처음에 로그인하지 않고 프로젝트 화면을 봤을 때는 fork 버튼이 없어서 당황했었다.<br><img src="/images/review-of-contributing-to-opensource/gitlab-where-is-fork-button.png" alt="where is fork button?"><br>gitlab은 시스템이 다른건가…? 항상 member로만 속해있다가 다른 프로젝트에 contribute하는 건 처음이라…<br>많은 걱정 속에, 일단 gitlab 가입을 하고 로그인을 했더니 바로 fork 버튼이 나타나더라.<br><img src="/images/review-of-contributing-to-opensource/gitlab-after-login.png" alt="fork button appeared after login"><br>1차 시도 때했던 작업을 동일하게 한 뒤, MR(Merge Request, gitlab에서는 PR이 아니라 MR)을 올렸다.</p>
+<h3 id="Merged"><a href="#Merged" class="headerlink" title="Merged!"></a>Merged!</h3><p>또 30분 정도 뒤에 메일이 왔는데 이번엔 Closed가 아니라 Merged 되었다는 메일이었다:)<br><img src="/images/review-of-contributing-to-opensource/merge-request-gitlab.png" alt="merge request"></p>
+<h3 id="mirror된-github에서도-한번-확인"><a href="#mirror된-github에서도-한번-확인" class="headerlink" title="mirror된 github에서도 한번 확인"></a>mirror된 github에서도 한번 확인</h3><p>github에서는 내 commit이 어떻게 보일까 궁금해서 다시 한 번 확인해보았다.<br>아이디가 같아서인지, 저 아이디의 아이콘을 클릭하면 내 github 페이지로 이동하더라.<br><img src="/images/review-of-contributing-to-opensource/commit-more.png" alt="commit at github">  </p>
+<p>이제 내가 고친 파일의 contributor 목록에 내가 보인다(흐-뭇)<br><img src="/images/review-of-contributing-to-opensource/contributors.png" alt="contributors"></p>
+<h2 id="후기"><a href="#후기" class="headerlink" title="후기"></a>후기</h2><p>오타를 발견하고 컨트리뷰트하기까지 약 반나절이 걸렸다.<br>너무나도 신선한 경험이었고, 토요일 아침에 발견해서 그런지 이번 주말은 뿌듯한 마음으로 잘 쉬었다.(응?)<br>역시 마음 조급해할 것 없이, 내가 할 일을 하면 되는구나 싶기도 하고…<br>큰 오픈소스 프로젝트도 아니고 별 거 아닌 오타 수정일 뿐이지만, 높아만 보였던 오픈소스 컨트리뷰트의 문턱을 넘어서 기쁘다.<br>그런데 아직도 의문인건 request를 보내면 30분 안에 답이 오는 저 열일하시는 분… 역시 nvidia인건가? 멋져…</p>
+
+    </div>
+
+    
+    
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- post-body-end -->
+<ins class="adsbygoogle"
+     style="display:block"
+     data-ad-client="ca-pub-2651093483415314"
+     data-ad-slot="8169778994"
+     data-ad-format="auto"
+     data-full-width-responsive="true"></ins>
+<script>
+     (adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/opensource-contribute/" rel="tag"># opensource contribute</a>
+              <a href="/tags/opensource/" rel="tag"># opensource</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2020/02/13/using-sysctls-in-k8s/" rel="prev" title="Kubernetes에서 sysctls 설정 변경하는 방법(feat. proc & sysctl)">
+      <i class="fa fa-chevron-left"></i> Kubernetes에서 sysctls 설정 변경하는 방법(feat. proc & sysctl)
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2020/04/04/kubernetes-resource-mgmt-1-requests-and-limits/" rel="next" title="Kubernetes의 resource 관리(1) - requests와 limits">
+      Kubernetes의 resource 관리(1) - requests와 limits <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    
+  <div class="comments">
+    <div id="disqus_thread">
+      <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+    </div>
+  </div>
+  
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%ED%86%A0%EC%9A%94%EC%9D%BC-%EC%95%84%EC%B9%A8-7%EC%8B%9C%EC%97%90-%EC%98%A4%ED%83%80%EB%A5%BC-%EB%B0%9C%EA%B2%AC%ED%95%98%EB%8B%A4"><span class="nav-number">1.</span> <span class="nav-text">토요일 아침 7시에 오타를 발견하다</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Contribute-1%EC%B0%A8-%EC%8B%9C%EB%8F%84"><span class="nav-number">2.</span> <span class="nav-text">Contribute 1차 시도</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#README-md-%EB%B0%8F-CONTRIBUTING-md-%EC%9D%BD%EA%B8%B0"><span class="nav-number">2.1.</span> <span class="nav-text">README.md 및 CONTRIBUTING.md 읽기</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%EC%98%A4%ED%94%88%EC%86%8C%EC%8A%A4-%ED%94%84%EB%A1%9C%EC%A0%9D%ED%8A%B8-fork%ED%95%98%EC%97%AC-%EC%9E%91%EC%97%85%ED%95%98%EA%B8%B0"><span class="nav-number">2.2.</span> <span class="nav-text">오픈소스 프로젝트 fork하여 작업하기</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Pull-Request%EB%A5%BC-%EC%98%AC%EB%A0%B8%EB%8B%A4"><span class="nav-number">2.3.</span> <span class="nav-text">Pull Request를 올렸다!</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%EC%9D%AD-Merged%EA%B0%80-%EC%95%84%EB%8B%88%EB%9D%BC-%EC%99%9C-Closed%EB%83%90%EC%98%B9"><span class="nav-number">2.4.</span> <span class="nav-text">읭 Merged가 아니라 왜 Closed냐옹</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Contribute-2%EC%B0%A8-%EC%8B%9C%EB%8F%84"><span class="nav-number">3.</span> <span class="nav-text">Contribute 2차 시도</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#gitlab-%EA%B0%80%EC%9E%85%ED%95%98%EA%B8%B0"><span class="nav-number">3.1.</span> <span class="nav-text">gitlab 가입하기</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%EC%98%A4%ED%94%88%EC%86%8C%EC%8A%A4-%ED%94%84%EB%A1%9C%EC%A0%9D%ED%8A%B8-fork%ED%95%98%EC%97%AC-%EC%9E%91%EC%97%85%ED%95%98%EA%B3%A0-MR-%EC%98%AC%EB%A6%AC%EA%B8%B0"><span class="nav-number">3.2.</span> <span class="nav-text">오픈소스 프로젝트 fork하여 작업하고, MR 올리기</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Merged"><span class="nav-number">3.3.</span> <span class="nav-text">Merged!</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#mirror%EB%90%9C-github%EC%97%90%EC%84%9C%EB%8F%84-%ED%95%9C%EB%B2%88-%ED%99%95%EC%9D%B8"><span class="nav-number">3.4.</span> <span class="nav-text">mirror된 github에서도 한번 확인</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%ED%9B%84%EA%B8%B0"><span class="nav-number">4.</span> <span class="nav-text">후기</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">Joowon Cheong</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">16</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">46</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Joowon Cheong</span>
+</div>
+  <div class="powered-by">Powered by <span class="exturl theme-link" data-url="aHR0cHM6Ly9oZXhvLmlv">Hexo</span> & <span class="exturl theme-link" data-url="aHR0cHM6Ly90aGVtZS1uZXh0Lm9yZw==">NexT.Gemini</span>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<script>
+  function loadCount() {
+    var d = document, s = d.createElement('script');
+    s.src = 'https://jwcheong0420-github-io.disqus.com/count.js';
+    s.id = 'dsq-count-scr';
+    (d.head || d.body).appendChild(s);
+  }
+  // defer loading until the whole page loading is completed
+  window.addEventListener('load', loadCount, false);
+</script>
+<script>
+  var disqus_config = function() {
+    this.page.url = "http://jwcheong0420.github.io/2020/02/24/review-of-contributing-to-opensource/";
+    this.page.identifier = "2020/02/24/review-of-contributing-to-opensource/";
+    this.page.title = "opensource에 contribute한 후기";
+    };
+  NexT.utils.loadComments(document.querySelector('#disqus_thread'), () => {
+    if (window.DISQUS) {
+      DISQUS.reset({
+        reload: true,
+        config: disqus_config
+      });
+    } else {
+      var d = document, s = d.createElement('script');
+      s.src = 'https://jwcheong0420-github-io.disqus.com/embed.js';
+      s.setAttribute('data-timestamp', '' + +new Date());
+      (d.head || d.body).appendChild(s);
+    }
+  });
+</script>
+
+</body>
+</html>

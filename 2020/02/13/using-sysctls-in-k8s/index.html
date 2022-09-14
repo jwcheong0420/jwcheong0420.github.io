@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/binary-code-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/binary-code-16x16.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="StDZENpmNwniZsyIkPBwcXfybLbk5VZzl332sCeAln4">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Noto Sans KR:300,300italic,400,400italic,700,700italic|Nanum Gothic Coding:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"jwcheong0420.github.io","root":"/","scheme":"Gemini","version":"7.8.0","exturl":true,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":"mac"},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="proc file system과 sysctl command, ipc namespace 분리 테스트까지 proc file system과 sysctl commandproc file systemproc file system이란 Unix 계열 OS에서 프로세스와 다른 시스템 정보를 계층적인 파일 구조 같은 형식으로 보여주는 pseudo filesystem 부트 타">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kubernetes에서 sysctls 설정 변경하는 방법(feat. proc &amp; sysctl)">
+<meta property="og:url" content="http://jwcheong0420.github.io/2020/02/13/using-sysctls-in-k8s/index.html">
+<meta property="og:site_name" content="삽질특기생">
+<meta property="og:description" content="proc file system과 sysctl command, ipc namespace 분리 테스트까지 proc file system과 sysctl commandproc file systemproc file system이란 Unix 계열 OS에서 프로세스와 다른 시스템 정보를 계층적인 파일 구조 같은 형식으로 보여주는 pseudo filesystem 부트 타">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://jwcheong0420.github.io/images/using-sysctls-in-k8s/test-cluster.png">
+<meta property="og:image" content="http://jwcheong0420.github.io/images/using-sysctls-in-k8s/failed-default.png">
+<meta property="og:image" content="http://jwcheong0420.github.io/images/using-sysctls-in-k8s/failed-default-describe.png">
+<meta property="og:image" content="http://jwcheong0420.github.io/images/using-sysctls-in-k8s/kernel-sem-default-value.png">
+<meta property="og:image" content="http://jwcheong0420.github.io/images/using-sysctls-in-k8s/proc-sys-kernel-sem.png">
+<meta property="og:image" content="http://jwcheong0420.github.io/images/using-sysctls-in-k8s/ipc-ns-test.png">
+<meta property="article:published_time" content="2020-02-13T12:55:30.000Z">
+<meta property="article:modified_time" content="2020-02-13T12:55:30.000Z">
+<meta property="article:author" content="Joowon Cheong">
+<meta property="article:tag" content="kubernetes">
+<meta property="article:tag" content="k8s">
+<meta property="article:tag" content="namespace">
+<meta property="article:tag" content="sysctl">
+<meta property="article:tag" content="proc file system">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://jwcheong0420.github.io/images/using-sysctls-in-k8s/test-cluster.png">
+
+<link rel="canonical" href="http://jwcheong0420.github.io/2020/02/13/using-sysctls-in-k8s/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'en'
+  };
+</script>
+<script data-ad-client="ca-pub-2651093483415314" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+  <title>Kubernetes에서 sysctls 설정 변경하는 방법(feat. proc & sysctl) | 삽질특기생</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">삽질특기생</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">다음에 삽질 덜하려고 만든 블로그</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://jwcheong0420.github.io/2020/02/13/using-sysctls-in-k8s/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Joowon Cheong">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="삽질특기생">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Kubernetes에서 sysctls 설정 변경하는 방법(feat. proc & sysctl)
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2020-02-13 21:55:30" itemprop="dateCreated datePublished" datetime="2020-02-13T21:55:30+09:00">2020-02-13</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/cloud/" itemprop="url" rel="index"><span itemprop="name">cloud</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/cloud/k8s/" itemprop="url" rel="index"><span itemprop="name">k8s</span></a>
+                </span>
+            </span>
+
+          
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus: </span>
+    
+    <a title="disqus" href="/2020/02/13/using-sysctls-in-k8s/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2020/02/13/using-sysctls-in-k8s/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>proc file system과 sysctl command, ipc namespace 분리 테스트까지</p>
+<h2 id="proc-file-system과-sysctl-command"><a href="#proc-file-system과-sysctl-command" class="headerlink" title="proc file system과 sysctl command"></a>proc file system과 sysctl command</h2><h3 id="proc-file-system"><a href="#proc-file-system" class="headerlink" title="proc file system"></a>proc file system</h3><h4 id="proc-file-system이란"><a href="#proc-file-system이란" class="headerlink" title="proc file system이란"></a>proc file system이란</h4><ul>
+<li>Unix 계열 OS에서 프로세스와 다른 시스템 정보를 계층적인 파일 구조 같은 형식으로 보여주는 pseudo filesystem</li>
+<li>부트 타임에 &#x2F;proc이라는 마운트 포인트에 매핑</li>
+<li>커널에서 내부 데이터 구조체에 대한 인터페이스처럼 행동<ul>
+<li>커널 영역과 사용자 영역 사이의 통신에 대한 방식 제공</li>
+</ul>
+</li>
+<li>런타임(sysctl) 시에 특정한 커널 파라미터를 바꾸고 시스템에 대한 정보를 얻는데 사용될 수 있음</li>
+</ul>
+<h4 id="x2F-proc-하위-구조"><a href="#x2F-proc-하위-구조" class="headerlink" title="&#x2F;proc 하위 구조"></a>&#x2F;proc 하위 구조</h4><ul>
+<li>&#x2F;proc&#x2F;{PID}<ul>
+<li>(커널 프로세스를 포함하는) 실행 중인 프로세스 별로 디렉토리가 존재</li>
+</ul>
+</li>
+<li>&#x2F;proc&#x2F;crypto<ul>
+<li>사용 가능한 암호화 모듈들에 대한 목록</li>
+</ul>
+</li>
+<li>&#x2F;proc&#x2F;devices<ul>
+<li>장치 ID에 의해 정렬된 캐릭터와 블록 장치 뿐 아니라 &#x2F;dev 이름에 대한 목록</li>
+</ul>
+</li>
+<li>&#x2F;proc&#x2F;filesystems<ul>
+<li>리스팅 시의 커널에 의해 지원되는 파일 시스템들의 목록</li>
+</ul>
+</li>
+<li>&#x2F;proc&#x2F;sys<ul>
+<li>동적으로 설정 가능한 커널 옵션들에 대한 인터페이스</li>
+</ul>
+</li>
+<li>(생략)</li>
+</ul>
+<h4 id="왜-proc-file-system을-사용하는가"><a href="#왜-proc-file-system을-사용하는가" class="headerlink" title="왜 proc file system을 사용하는가?"></a>왜 proc file system을 사용하는가?</h4><ul>
+<li>파일 시스템 오버 헤드를 줄일 수 있음<ul>
+<li>일반적인 파일시스템은 오버헤드가 많다<ul>
+<li>각 파일의 inode, superblocks와 같은 객체를 관리해야 함</li>
+<li>이런 정보를 필요할 때마다 OS에 요청해야 함</li>
+<li>이런 정보들은 서로 어긋날 수도 있고, 단편화 현상이 발생할 수도 있음</li>
+</ul>
+</li>
+<li>procfs은 리눅스 커널에서 직접 파일시스템을 관리하는 방법을 채택</li>
+<li>procfs은 커널메모리에서 돌아가는 가상 파일 시스템</li>
+</ul>
+</li>
+<li>물리적인 파일시스템 장치를 필요로 하지 않음<ul>
+<li>커널 메모리에서 유지하는 파일 시스템</li>
+</ul>
+</li>
+<li>최적화된 파일 작업 수행<ul>
+<li>proc 하위 파일들은 고정적이고 처리해야할 데이터 양이 적으므로, open&#x2F;read&#x2F;write&#x2F;close 등을 사용하여 데이터를 다루는 것이 비효율적</li>
+</ul>
+</li>
+</ul>
+<h4 id="proc-프로그래밍"><a href="#proc-프로그래밍" class="headerlink" title="proc 프로그래밍"></a>proc 프로그래밍</h4><h5 id="user와-데이터-교환법"><a href="#user와-데이터-교환법" class="headerlink" title="user와 데이터 교환법"></a>user와 데이터 교환법</h5><ul>
+<li>procfs의 데이터는 파일에 저장되는 것이 아니라 커널 메모리에 저장하며, 커널 메모리는 유저레벨에서 직접 접근 불가능<ul>
+<li>user가 cat(혹은 read 함수)를 통해 파일의 내용을 읽으려하면, 커널에서 데이터를 유저에게 일정한 포맷으로 뿌려줌</li>
+<li>user가 어떤 내용을 proc 파일에 쓰게되면 데이터를 받아들이고 가공해서 커널 메모리에 로드</li>
+</ul>
+</li>
+<li>kernel와 user 사이에 데이터를 전달해주는 callback 함수를 등록시켜서 사용  <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"># proc_dir_entry에 read/write를 위한 callback 함수를 등록</span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">proc_dir_entry</span> *<span class="title">entry</span>;</span></span><br><span class="line"></span><br><span class="line">entry-&gt;read_proc = read_proc_foo;</span><br><span class="line">entry-&gt;write_proc = write_proc_foo;</span><br></pre></td></tr></table></figure></li>
+</ul>
+<h4 id="proc-file-system-소스-코드"><a href="#proc-file-system-소스-코드" class="headerlink" title="proc file system 소스 코드"></a>proc file system 소스 코드</h4><ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/torvalds/linux/tree/master/fs/proc">https://github.com/torvalds/linux/tree/master/fs/proc</a></li>
+</ul>
+<h3 id="sysctl-command"><a href="#sysctl-command" class="headerlink" title="sysctl command"></a>sysctl command</h3><ul>
+<li>동작<ul>
+<li>동적으로 커널 파라미터를 설정</li>
+<li>&#x2F;proc&#x2F;sys 하위에 있는 파라미터만 가능</li>
+</ul>
+</li>
+<li>사용법<ul>
+<li>sysctl -w {param}&#x3D;”{value}”<ul>
+<li>일시적으로 해당 파라미터를 설정</li>
+<li>재부팅 시 유지되지 않음</li>
+</ul>
+</li>
+<li>sysctl -p{file_path}<ul>
+<li>file_path로부터 sysctl 설정을 로드</li>
+<li>file_path가 주어지지 않으면 &#x2F;etc&#x2F;sysctl.conf을 로드</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>참고<ul>
+<li>부팅 시점에 &#x2F;proc mount 후 sysctl에 의해 &#x2F;etc&#x2F;sysctl.conf가 자동으로 로드됨</li>
+</ul>
+</li>
+</ul>
+<h2 id="K8S에서의-sysctl-설정-방법"><a href="#K8S에서의-sysctl-설정-방법" class="headerlink" title="K8S에서의 sysctl 설정 방법"></a>K8S에서의 sysctl 설정 방법</h2><ul>
+<li>K8S에서 커널 파라미터 변경을 위해 sysctls spec을 설정할 수 있음</li>
+<li>sysctls<ul>
+<li>safe와 unsafe 파라미터를 구분하여 관리</li>
+<li>safe 파라미터는 default로 enable<ul>
+<li>kernel.shm_rmid_forced</li>
+<li>net.ipv4.ip_local_port_range</li>
+<li>net.ipv4.tcp_syncookies</li>
+</ul>
+</li>
+<li>unsafe 파라미터는 cluster admin을 통해 node별로 enable해야 함<ul>
+<li>disabled unsafe sysctls를 사용한 pod은 스케줄링까지는 되지만, launch는 실패</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>unsafe sysctls를 enable하는 방법<ul>
+<li>node별로 kubelet에 다음과 같은 설정을 추가하여 기동  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubelet --allowed-unsafe-sysctls ‘&#123;원하는 kernel 파라미터&#125;’ ...</span><br></pre></td></tr></table></figure></li>
+</ul>
+</li>
+</ul>
+<h2 id="테스트"><a href="#테스트" class="headerlink" title="테스트"></a>테스트</h2><h3 id="테스트-환경"><a href="#테스트-환경" class="headerlink" title="테스트 환경"></a>테스트 환경</h3><p><img src="/images/using-sysctls-in-k8s/test-cluster.png" alt="test한 cluster 정보"></p>
+<h3 id="테스트-과정"><a href="#테스트-과정" class="headerlink" title="테스트 과정"></a>테스트 과정</h3><ul>
+<li><p>enable되지 않은 unsafe 파라미터를 수정하는 pod deploy</p>
+  <figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Pod</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line"><span class="attr">name:</span> <span class="string">joo-modify-sysctl</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line"><span class="attr">securityContext:</span></span><br><span class="line">    <span class="attr">sysctls:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">kernel.sem</span></span><br><span class="line">    <span class="attr">value:</span> <span class="string">&quot;10000   1024000000      500     32000&quot;</span></span><br><span class="line"><span class="attr">containers:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">nginx</span></span><br><span class="line">    <span class="attr">image:</span> <span class="string">nginx</span></span><br><span class="line">    <span class="attr">ports:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">containerPort:</span> <span class="number">80</span></span><br><span class="line">        <span class="attr">name:</span> <span class="string">http</span></span><br></pre></td></tr></table></figure>
+
+  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">root@K8S-3-1:~/joo$ k apply -f sysctl_test.yaml</span><br><span class="line">pod/joo-modify-sysctl created</span><br></pre></td></tr></table></figure>
+<p>  <img src="/images/using-sysctls-in-k8s/failed-default.png" alt="sysctl 변경 실패 - SysctlForbidden"><br>  <img src="/images/using-sysctls-in-k8s/failed-default-describe.png" alt="sysctl 변경 실패 - SysctlForbidden"></p>
+</li>
+<li><p>kubelet config에 sysctl unsafe parameter 활성화</p>
+<ul>
+<li>kubelet 설정에 –allowed-unsafe-sysctls ‘kernel.sem’ 추가  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">root@K8S-3-5:~$ vi /etc/systemd/system/kubelet.service.d/10-kubeadm.conf</span><br></pre></td></tr></table></figure>
+  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Note: This dropin only works with kubeadm and kubelet v1.11+</span></span><br><span class="line">[Service]</span><br><span class="line">Environment=<span class="string">&quot;KUBELET_KUBECONFIG_ARGS=--bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf --kubeconfig=/etc/kubernetes/kubelet.conf&quot;</span></span><br><span class="line">Environment=<span class="string">&quot;KUBELET_CONFIG_ARGS=--config=/var/lib/kubelet/config.yaml&quot;</span></span><br><span class="line">Environment=<span class="string">&quot;KUBELET_EXTRA_ARGS=--feature-gates=DevicePlugins=true --allowed-unsafe-sysctls &#x27;kernel.sem&#x27;&quot;</span></span><br><span class="line"><span class="comment"># This is a file that &quot;kubeadm init&quot; and &quot;kubeadm join&quot; generates at runtime, populating the KUBELET_KUBEADM_ARGS variable dynamically</span></span><br><span class="line">EnvironmentFile=-/var/lib/kubelet/kubeadm-flags.env</span><br><span class="line"><span class="comment"># This is a file that the user can use for overrides of the kubelet args as a last resort. Preferably, the user should use</span></span><br><span class="line"><span class="comment"># the .NodeRegistration.KubeletExtraArgs object in the configuration files instead. KUBELET_EXTRA_ARGS should be sourced from this file.</span></span><br><span class="line">EnvironmentFile=-/etc/default/kubelet</span><br><span class="line">ExecStart=</span><br><span class="line">ExecStart=/usr/bin/kubelet <span class="variable">$KUBELET_KUBECONFIG_ARGS</span> <span class="variable">$KUBELET_CONFIG_ARGS</span> <span class="variable">$KUBELET_KUBEADM_ARGS</span> <span class="variable">$KUBELET_EXTRA_ARGS</span></span><br></pre></td></tr></table></figure></li>
+<li>설정 reload  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">root@K8S-3-5:~$ systemctl daemon-reload</span><br></pre></td></tr></table></figure></li>
+<li>kubelet restart  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">root@K8S-3-5:~$ systemctl restart kubelet</span><br></pre></td></tr></table></figure></li>
+</ul>
+</li>
+<li><p>pod 다시 deploy</p>
+<ul>
+<li>deploy 성공  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">root@K8S-3-1:~/joo$ k get pods -o wide</span><br><span class="line">NAME                                   READY     STATUS              RESTARTS   AGE       IP                NODE      NOMINATED NODE   READINESS GATES</span><br><span class="line">joo-modify-sysctl                      0/1       ContainerCreating   0          2s        &lt;none&gt;            k8s-3-5   &lt;none&gt;           &lt;none&gt;</span><br></pre></td></tr></table></figure></li>
+<li>kernel.sem 비교  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">root@K8S-3-1:~$ <span class="built_in">cat</span> /proc/sys/kernel/sem</span><br><span class="line">32000   1024000000      500     32000</span><br><span class="line">root@K8S-3-1:~$ k <span class="built_in">exec</span> -it joo-modify-sysctl /bin/bash</span><br><span class="line">root@joo-modify-sysctl:/$ <span class="built_in">cat</span> /proc/sys/kernel/sem</span><br><span class="line">10000   1024000000      500     32000</span><br></pre></td></tr></table></figure></li>
+</ul>
+</li>
+</ul>
+<h2 id="kernel-sem-기본값-확인"><a href="#kernel-sem-기본값-확인" class="headerlink" title="kernel.sem 기본값 확인"></a>kernel.sem 기본값 확인</h2><ul>
+<li>kernel src :  <a target="_blank" rel="noopener" href="https://github.com/torvalds/linux/blob/v4.15/include/uapi/linux/sem.h#L79">https://github.com/torvalds/linux/blob/v4.15/include/uapi/linux/sem.h#L79</a><br>  <img src="/images/using-sysctls-in-k8s/kernel-sem-default-value.png" alt="kernel.sem default value"></li>
+<li>cat &#x2F;proc&#x2F;sys&#x2F;kernel&#x2F;sem<br>  <img src="/images/using-sysctls-in-k8s/proc-sys-kernel-sem.png" alt="/proc/sys/kernel/sem"><ul>
+<li>SEMMSL: max semaphores per array</li>
+<li>SEMMNS: maximum semaphores system-wide</li>
+<li>SEMOPM : maximum operations per semop call</li>
+<li>SEMMNI: maximum arrays</li>
+</ul>
+</li>
+</ul>
+<h2 id="IPC-namespace-분리-시-kernel-sem-값-확인"><a href="#IPC-namespace-분리-시-kernel-sem-값-확인" class="headerlink" title="IPC namespace 분리 시 kernel.sem 값 확인"></a>IPC namespace 분리 시 kernel.sem 값 확인</h2><p>kernel.sem parameter는 IPC namespace가 분리되면 host와 다른 값(default 값)을 가짐<br>parameter별로 어떤 namespace에 의해 분리되는지는 다름</p>
+<h3 id="테스트-과정-1"><a href="#테스트-과정-1" class="headerlink" title="테스트 과정"></a>테스트 과정</h3><ul>
+<li>default kernel.sem 확인<ul>
+<li>cat &#x2F;proc&#x2F;sys&#x2F;kernel&#x2F;sem</li>
+</ul>
+</li>
+<li>sysctl로 kernel.sem 변경<ul>
+<li>sysctl -w kernel.sem&#x3D;”33000   1024000000 500 32000”</li>
+</ul>
+</li>
+<li>host ipc namespace에서의 kernel.sem을 출력하고, 새로운 ipc ns를 갖는 자식 process를 생성하여 kernel.sem을 출력하는 프로그램 실행<br>  <img src="/images/using-sysctls-in-k8s/ipc-ns-test.png" alt="ipc namespace 분리 시 kernel.sem 값 확인"></li>
+<li>a.out 소스  <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> _GNU_SOURCE</span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdlib.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;sched.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;signal.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;sys/types.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;sys/wait.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="type">static</span> <span class="type">char</span> child_stack[<span class="number">1048576</span>];</span><br><span class="line"></span><br><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">child_fn</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="built_in">printf</span>(<span class="string">&quot;at child - new ipc ns\n&quot;</span>);</span><br><span class="line">        system(<span class="string">&quot;cat /proc/sys/kernel/sem&quot;</span>);</span><br><span class="line">        <span class="built_in">printf</span>(<span class="string">&quot;\n\n&quot;</span>);</span><br><span class="line">        <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">int</span> <span class="title function_">main</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="built_in">printf</span>(<span class="string">&quot;at parent - host ipc ns\n&quot;</span>);</span><br><span class="line">        system(<span class="string">&quot;cat /proc/sys/kernel/sem&quot;</span>);</span><br><span class="line">        <span class="built_in">printf</span>(<span class="string">&quot;\n\n&quot;</span>);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        <span class="type">pid_t</span> child_pid = clone(child_fn, child_stack+<span class="number">1048576</span>, CLONE_NEWIPC | SIGCHLD, <span class="literal">NULL</span>);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        waitpid(child_pid, <span class="literal">NULL</span>, <span class="number">0</span>);</span><br><span class="line">        <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li>
+</ul>
+<h2 id="참고-링크"><a href="#참고-링크" class="headerlink" title="참고 링크"></a>참고 링크</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Procfs">https://en.wikipedia.org/wiki/Procfs</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.tldp.org/LDP/Linux-Filesystem-Hierarchy/html/proc.html">https://www.tldp.org/LDP/Linux-Filesystem-Hierarchy/html/proc.html</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.joinc.co.kr/w/Site/system_programing/proc/ProcFsPrograming">https://www.joinc.co.kr/w/Site/system_programing/proc/ProcFsPrograming</a></li>
+<li><a target="_blank" rel="noopener" href="http://jake.dothome.co.kr/proc/">http://jake.dothome.co.kr/proc/</a></li>
+<li><a target="_blank" rel="noopener" href="http://man7.org/linux/man-pages/man2/sysctl.2.html">http://man7.org/linux/man-pages/man2/sysctl.2.html</a></li>
+<li><a target="_blank" rel="noopener" href="http://man7.org/linux/man-pages/man8/sysctl.8.html">http://man7.org/linux/man-pages/man8/sysctl.8.html</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.toptal.com/linux/separation-anxiety-isolating-your-system-with-linux-namespaces">https://www.toptal.com/linux/separation-anxiety-isolating-your-system-with-linux-namespaces</a></li>
+</ul>
+
+    </div>
+
+    
+    
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- post-body-end -->
+<ins class="adsbygoogle"
+     style="display:block"
+     data-ad-client="ca-pub-2651093483415314"
+     data-ad-slot="8169778994"
+     data-ad-format="auto"
+     data-full-width-responsive="true"></ins>
+<script>
+     (adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/kubernetes/" rel="tag"># kubernetes</a>
+              <a href="/tags/k8s/" rel="tag"># k8s</a>
+              <a href="/tags/namespace/" rel="tag"># namespace</a>
+              <a href="/tags/sysctl/" rel="tag"># sysctl</a>
+              <a href="/tags/proc-file-system/" rel="tag"># proc file system</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2020/02/11/cgroup-v2/" rel="prev" title="cgroup v2">
+      <i class="fa fa-chevron-left"></i> cgroup v2
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2020/02/24/review-of-contributing-to-opensource/" rel="next" title="opensource에 contribute한 후기">
+      opensource에 contribute한 후기 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    
+  <div class="comments">
+    <div id="disqus_thread">
+      <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+    </div>
+  </div>
+  
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#proc-file-system%EA%B3%BC-sysctl-command"><span class="nav-number">1.</span> <span class="nav-text">proc file system과 sysctl command</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#proc-file-system"><span class="nav-number">1.1.</span> <span class="nav-text">proc file system</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#proc-file-system%EC%9D%B4%EB%9E%80"><span class="nav-number">1.1.1.</span> <span class="nav-text">proc file system이란</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#x2F-proc-%ED%95%98%EC%9C%84-%EA%B5%AC%EC%A1%B0"><span class="nav-number">1.1.2.</span> <span class="nav-text">&#x2F;proc 하위 구조</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%EC%99%9C-proc-file-system%EC%9D%84-%EC%82%AC%EC%9A%A9%ED%95%98%EB%8A%94%EA%B0%80"><span class="nav-number">1.1.3.</span> <span class="nav-text">왜 proc file system을 사용하는가?</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#proc-%ED%94%84%EB%A1%9C%EA%B7%B8%EB%9E%98%EB%B0%8D"><span class="nav-number">1.1.4.</span> <span class="nav-text">proc 프로그래밍</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#user%EC%99%80-%EB%8D%B0%EC%9D%B4%ED%84%B0-%EA%B5%90%ED%99%98%EB%B2%95"><span class="nav-number">1.1.4.1.</span> <span class="nav-text">user와 데이터 교환법</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#proc-file-system-%EC%86%8C%EC%8A%A4-%EC%BD%94%EB%93%9C"><span class="nav-number">1.1.5.</span> <span class="nav-text">proc file system 소스 코드</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#sysctl-command"><span class="nav-number">1.2.</span> <span class="nav-text">sysctl command</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#K8S%EC%97%90%EC%84%9C%EC%9D%98-sysctl-%EC%84%A4%EC%A0%95-%EB%B0%A9%EB%B2%95"><span class="nav-number">2.</span> <span class="nav-text">K8S에서의 sysctl 설정 방법</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%ED%85%8C%EC%8A%A4%ED%8A%B8"><span class="nav-number">3.</span> <span class="nav-text">테스트</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%ED%85%8C%EC%8A%A4%ED%8A%B8-%ED%99%98%EA%B2%BD"><span class="nav-number">3.1.</span> <span class="nav-text">테스트 환경</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%ED%85%8C%EC%8A%A4%ED%8A%B8-%EA%B3%BC%EC%A0%95"><span class="nav-number">3.2.</span> <span class="nav-text">테스트 과정</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#kernel-sem-%EA%B8%B0%EB%B3%B8%EA%B0%92-%ED%99%95%EC%9D%B8"><span class="nav-number">4.</span> <span class="nav-text">kernel.sem 기본값 확인</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#IPC-namespace-%EB%B6%84%EB%A6%AC-%EC%8B%9C-kernel-sem-%EA%B0%92-%ED%99%95%EC%9D%B8"><span class="nav-number">5.</span> <span class="nav-text">IPC namespace 분리 시 kernel.sem 값 확인</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%ED%85%8C%EC%8A%A4%ED%8A%B8-%EA%B3%BC%EC%A0%95-1"><span class="nav-number">5.1.</span> <span class="nav-text">테스트 과정</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%EC%B0%B8%EA%B3%A0-%EB%A7%81%ED%81%AC"><span class="nav-number">6.</span> <span class="nav-text">참고 링크</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">Joowon Cheong</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">16</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">46</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Joowon Cheong</span>
+</div>
+  <div class="powered-by">Powered by <span class="exturl theme-link" data-url="aHR0cHM6Ly9oZXhvLmlv">Hexo</span> & <span class="exturl theme-link" data-url="aHR0cHM6Ly90aGVtZS1uZXh0Lm9yZw==">NexT.Gemini</span>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<script>
+  function loadCount() {
+    var d = document, s = d.createElement('script');
+    s.src = 'https://jwcheong0420-github-io.disqus.com/count.js';
+    s.id = 'dsq-count-scr';
+    (d.head || d.body).appendChild(s);
+  }
+  // defer loading until the whole page loading is completed
+  window.addEventListener('load', loadCount, false);
+</script>
+<script>
+  var disqus_config = function() {
+    this.page.url = "http://jwcheong0420.github.io/2020/02/13/using-sysctls-in-k8s/";
+    this.page.identifier = "2020/02/13/using-sysctls-in-k8s/";
+    this.page.title = "Kubernetes에서 sysctls 설정 변경하는 방법(feat. proc & sysctl)";
+    };
+  NexT.utils.loadComments(document.querySelector('#disqus_thread'), () => {
+    if (window.DISQUS) {
+      DISQUS.reset({
+        reload: true,
+        config: disqus_config
+      });
+    } else {
+      var d = document, s = d.createElement('script');
+      s.src = 'https://jwcheong0420-github-io.disqus.com/embed.js';
+      s.setAttribute('data-timestamp', '' + +new Date());
+      (d.head || d.body).appendChild(s);
+    }
+  });
+</script>
+
+</body>
+</html>
