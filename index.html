@@ -185,6 +185,157 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://jwcheong0420.github.io/2022/06/27/k8s-probes-and-istio-health-checking/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Joowon Cheong">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="삽질특기생">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2022/06/27/k8s-probes-and-istio-health-checking/" class="post-title-link" itemprop="url">Kubernetes의 probe와 istio의 health checking</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-06-27 21:48:45" itemprop="dateCreated datePublished" datetime="2022-06-27T21:48:45+09:00">2022-06-27</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/cloud/" itemprop="url" rel="index"><span itemprop="name">cloud</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/cloud/k8s/" itemprop="url" rel="index"><span itemprop="name">k8s</span></a>
+                </span>
+            </span>
+
+          
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus: </span>
+    
+    <a title="disqus" href="/2022/06/27/k8s-probes-and-istio-health-checking/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2022/06/27/k8s-probes-and-istio-health-checking/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p>k8s의 probe를 istio가 어떠한 방식으로 변환하여 app의 health check를 수행하는 지 알아보자</p>
+<h2 id="k8s-probe"><a href="#k8s-probe" class="headerlink" title="k8s probe"></a>k8s probe</h2><p>k8s probe 종류는 3가지가 있다</p>
+<ul>
+<li>liveness<br>살아있니? 나 혹시 얘 죽이고 다시 띄워야 하니?</li>
+<li>readiness<br>요청 받을 준비 됐니? 아직이면 얘 Service에서 지운다?</li>
+<li>startup<br>잘 떴니? 그래 애가 좀 느릴 수도 있지. 다 뜨면 그 때부터 liveness, readiness probe 할게</li>
+</ul>
+<p>probe 방법은 4가지가 있다</p>
+<ul>
+<li>exec<br>커맨드를 실행해서 exit code가 0면 성공, 그 외 실패</li>
+<li>httpGet<br>http response code가 200 이상 ~ 400 미만이면 성공, 그 외 실패</li>
+<li>tcpSocket<br>socket open을 시도해서 connection이 수립되면 성공, 아니면 실패</li>
+<li>grpc<br><span class="exturl" data-url="aHR0cHM6Ly9rdWJlcm5ldGVzLmlvL2Jsb2cvMjAyMi8wNS8xMy9ncnBjLXByb2Jlcy1ub3ctaW4tYmV0YS8=">k8s 1.24부터 베타로 적용<i class="fa fa-external-link-alt"></i></span> 됨. <span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL2dycGMvZ3JwYy9ibG9iL21hc3Rlci9kb2MvaGVhbHRoLWNoZWNraW5nLm1k">grpc health checking protocol<i class="fa fa-external-link-alt"></i></span>을 구현해야 함</li>
+</ul>
+<p>probe 옵션은 다음과 같다</p>
+<ul>
+<li>initialDelaySeconds<ul>
+<li>probe 최초 수행 지연</li>
+<li>default: 0 &#x2F; min: 0</li>
+</ul>
+</li>
+<li>periodSeconds<ul>
+<li>probe 주기</li>
+<li>default: 10 &#x2F; min: 1</li>
+</ul>
+</li>
+<li>timeoutSeconds<ul>
+<li>probe timeout</li>
+<li>deault: 1 &#x2F; min: 1</li>
+</ul>
+</li>
+<li>successThreshold<ul>
+<li>probe가 몇 번 이상 성공해야 찐성공인지</li>
+<li>default: 1 &#x2F; liveness랑 startup은 무조건 1 &#x2F; min: 1</li>
+</ul>
+</li>
+<li>failureThreshold<ul>
+<li>probe를 최대 몇 번 수행할 건지</li>
+<li>default: 3 &#x2F; min: 1</li>
+</ul>
+</li>
+</ul>
+<h2 id="istio는-probe를-rewrite한다"><a href="#istio는-probe를-rewrite한다" class="headerlink" title="istio는 probe를 rewrite한다"></a>istio는 probe를 rewrite한다</h2><p>그런데 주의할 점이 있다. <strong>probe는 kubelet이 수행한다.</strong></p>
+<blockquote>
+<p>The kubelet uses liveness probes to know when to restart a container.<br>For example, liveness probes could catch a deadlock, where an application is running, but unable to make progress.<br>Restarting a container in such a state can help to make the application more available despite bugs.</p>
+</blockquote>
+<p>나는 service mesh를 지원하기 위해 istio를 설치하여 사용하고 있다<br>그런데 <strong>istio는 외부에서 container로 들어오는 트래픽을 sidecar로 redirect</strong>하며, <strong>kubelet이 보내는 요청도 마찬가지</strong>다!<br>http 요청의 경우 kubelet이 istio가 발급한 인증서가 없어서 실패할 수 있고(사실 뭔소린지 아직 모르겠음),<br><strong>tcp 요청의 경우 모든 port가 open할 수 있는 것처럼 보여서 항상 성공</strong>한다<br>그래서 <strong>istio는 probe를 sidecar한테 보내도록 rewrite</strong>한다</p>
+<blockquote>
+<p>Istio solves both these problems by rewriting the application PodSpec readiness&#x2F;liveness probe, so that the probe request is sent to the sidecar agent. For HTTP requests, the sidecar agent redirects the request to the application and strips the response body, only returning the response code. For TCP probes, the sidecar agent will then do the port check while avoiding the traffic redirection.</p>
+</blockquote>
+<h3 id="tcp-probe를-사용하는-예시"><a href="#tcp-probe를-사용하는-예시" class="headerlink" title="tcp probe를 사용하는 예시"></a>tcp probe를 사용하는 예시</h3><p>예를 들어 tcp probe를 사용하는 pod을 만들어보자</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">apps/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Deployment</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">probe-test</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">replicas:</span> <span class="number">1</span></span><br><span class="line">  <span class="attr">selector:</span></span><br><span class="line">    <span class="attr">matchLabels:</span></span><br><span class="line">      <span class="attr">app:</span> <span class="string">probe-test</span></span><br><span class="line">  <span class="attr">template:</span></span><br><span class="line">    <span class="attr">metadata:</span></span><br><span class="line">      <span class="attr">labels:</span></span><br><span class="line">        <span class="attr">app:</span> <span class="string">probe-test</span></span><br><span class="line">    <span class="attr">spec:</span></span><br><span class="line">      <span class="attr">containers:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">test</span></span><br><span class="line">        <span class="attr">image:</span> <span class="string">nginx:latest</span></span><br><span class="line">        <span class="attr">livenessProbe:</span></span><br><span class="line">          <span class="attr">tcpSocket:</span></span><br><span class="line">            <span class="attr">port:</span> <span class="number">80</span></span><br><span class="line">        <span class="attr">readinessProbe:</span></span><br><span class="line">          <span class="attr">tcpSocket:</span></span><br><span class="line">            <span class="attr">port:</span> <span class="number">80</span></span><br></pre></td></tr></table></figure>
+<p>생성해보면</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">$ kubectl describe pod probe-test</span><br><span class="line">Name:       probe-test-5ff7c54648-6cj5v</span><br><span class="line"><span class="comment">### 생략 ###</span></span><br><span class="line">Containers:</span><br><span class="line">  <span class="built_in">test</span>:</span><br><span class="line">    Liveness:   http-get http://:15020/app-health/test/livez delay=0s <span class="built_in">timeout</span>=1s period=10s <span class="comment">#success=1 #failure=3</span></span><br><span class="line">    Readiness:  http-get http://:15020/app-health/test/readyz delay=0s <span class="built_in">timeout</span>=1s period=10s <span class="comment">#success=1 #failure=3</span></span><br><span class="line"><span class="comment">### 생략 ###</span></span><br><span class="line">  istio-proxy:</span><br><span class="line">    Environment:</span><br><span class="line">      ISTIO_KUBE_APP_PROBERS: &#123;<span class="string">&quot;/app-health/test/livez&quot;</span>:&#123;<span class="string">&quot;tcpSocket&quot;</span>:&#123;<span class="string">&quot;port&quot;</span>:80&#125;,<span class="string">&quot;timeoutSeconds&quot;</span>:1&#125;,<span class="string">&quot;/app-health/test/readyz&quot;</span>:&#123;<span class="string">&quot;tcpSocket&quot;</span>:&#123;<span class="string">&quot;port&quot;</span>:80&#125;,<span class="string">&quot;timeoutSeconds&quot;</span>:1&#125;&#125;</span><br><span class="line"><span class="comment">### 생략 ###</span></span><br></pre></td></tr></table></figure>
+<p><code>test</code> container의 liveness, readiness probe가 정의했던 것과 다르고,<br><code>istio-proxy</code> container의 환경변수에 <code>ISTIO_KUBE_APP_PROBERS</code>의 value로 우리가 하려던 probe의 내용이 들어가있다.</p>
+<p><span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL2lzdGlvL2lzdGlvL2Jsb2IvZTc5NWRlNTA1OTA5ZDdlYjQzMWZhMmNiY2Q0ZDJmZTI5ZDJjNmVkNi9waWxvdC9jbWQvcGlsb3QtYWdlbnQvc3RhdHVzL3NlcnZlci5nbyNMNjYtTDcx">istio 소스<i class="fa fa-external-link-alt"></i></span>에서 관련있는 부분을 찾아보니, 아래와 같다.</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// KubeAppProberEnvName is the name of the command line flag for pilot agent to pass app prober config.</span></span><br><span class="line"><span class="comment">// The json encoded string to pass app HTTP probe information from injector(istioctl or webhook).</span></span><br><span class="line"><span class="comment">// For example, ISTIO_KUBE_APP_PROBERS=&#x27;&#123;&quot;/app-health/httpbin/livez&quot;:&#123;&quot;httpGet&quot;:&#123;&quot;path&quot;: &quot;/hello&quot;, &quot;port&quot;: 8080&#125;&#125;.</span></span><br><span class="line"><span class="comment">// indicates that httpbin container liveness prober port is 8080 and probing path is /hello.</span></span><br><span class="line"><span class="comment">// This environment variable should never be set manually.</span></span><br><span class="line">KubeAppProberEnvName = <span class="string">&quot;ISTIO_KUBE_APP_PROBERS&quot;</span></span><br></pre></td></tr></table></figure>
+<p>(내부 구현은 잘은 모르겠으나) <code>/app-healthz/&#123;container name&#125;/livez</code>로 요청이 오면 우리가 지정했던 probe가 실행되도록 해놓은 것 같다</p>
+<h3 id="rewrite하지-않도록-하는-방법"><a href="#rewrite하지-않도록-하는-방법" class="headerlink" title="rewrite하지 않도록 하는 방법"></a>rewrite하지 않도록 하는 방법</h3><p>만약 이렇게 istio가 probe를 rewrite하는 게 싫다면<br><code>spec.template.metadata.annotations</code>에 <code>sidecar.istio.io/rewriteAppHTTPProbers: &quot;false&quot;</code>를 추가하면 된다</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">apps/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Deployment</span></span><br><span class="line">  <span class="attr">metadata:</span></span><br><span class="line">    <span class="attr">name:</span> <span class="string">probe-test</span></span><br><span class="line">  <span class="attr">spec:</span></span><br><span class="line">    <span class="attr">replicas:</span> <span class="number">1</span></span><br><span class="line">    <span class="attr">selector:</span></span><br><span class="line">      <span class="attr">matchLabels:</span></span><br><span class="line">        <span class="attr">app:</span> <span class="string">probe-test</span></span><br><span class="line">    <span class="attr">template:</span></span><br><span class="line">      <span class="attr">metadata:</span></span><br><span class="line">        <span class="attr">labels:</span></span><br><span class="line">          <span class="attr">app:</span> <span class="string">probe-test</span></span><br><span class="line">        <span class="attr">annotations:</span></span><br><span class="line">          <span class="attr">sidecar.istio.io/rewriteAppHTTPProbers:</span> <span class="string">&quot;false&quot;</span></span><br><span class="line">      <span class="attr">spec:</span></span><br><span class="line">        <span class="attr">containers:</span></span><br><span class="line">          <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">test</span></span><br><span class="line">          <span class="attr">image:</span> <span class="string">nginx:latest</span></span><br><span class="line">          <span class="attr">livenessProbe:</span></span><br><span class="line">            <span class="attr">tcpSocket:</span></span><br><span class="line">              <span class="attr">port:</span> <span class="number">80</span></span><br><span class="line">          <span class="attr">readinessProbe:</span></span><br><span class="line">            <span class="attr">tcpSocket:</span></span><br><span class="line">              <span class="attr">port:</span> <span class="number">80</span></span><br></pre></td></tr></table></figure>
+<p>생성해보면</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">$ kubectl describe pod probe-test</span><br><span class="line">Name:           probe-test-85479c6b4-tl7sm</span><br><span class="line"><span class="comment">### 생략 ###</span></span><br><span class="line">Annotations:    kubectl.kubernetes.io/default-container: <span class="built_in">test</span></span><br><span class="line">                sidecar.istio.io/rewriteAppHTTPProbers: <span class="literal">false</span></span><br><span class="line"><span class="comment">### 생략 ###</span></span><br><span class="line">Containers:</span><br><span class="line">  <span class="built_in">test</span>:</span><br><span class="line">    Liveness: tcp-socket :80 delay=0s <span class="built_in">timeout</span>=1s period=10s <span class="comment">#success=1 #failure=3</span></span><br><span class="line">    Readiness: tcp-socket :80 delay=0s <span class="built_in">timeout</span>=1s period=10s <span class="comment">#success=1 #failure=3</span></span><br><span class="line"><span class="comment">### 생략 ###</span></span><br></pre></td></tr></table></figure>
+<p><code>test</code> container에 우리가 정의한 대로 liveness, readiness probe가 들어가있고,<br><code>istio-proxy</code> container의 환경변수에는 <code>ISTIO_KUBE_APP_PROBERS</code>가 등록되어있지 않다.</p>
+<h2 id="참고-자료"><a href="#참고-자료" class="headerlink" title="참고 자료"></a>참고 자료</h2><ul>
+<li><span class="exturl" data-url="aHR0cHM6Ly9rdWJlcm5ldGVzLmlvL2RvY3MvdGFza3MvY29uZmlndXJlLXBvZC1jb250YWluZXIvY29uZmlndXJlLWxpdmVuZXNzLXJlYWRpbmVzcy1zdGFydHVwLXByb2Jlcy8=">https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9pc3Rpby5pby9sYXRlc3QvZG9jcy9vcHMvY29uZmlndXJhdGlvbi9tZXNoL2FwcC1oZWFsdGgtY2hlY2svI2xpdmVuZXNzLWFuZC1yZWFkaW5lc3MtcHJvYmVzLXVzaW5nLXRoZS1odHRwLXJlcXVlc3QtYXBwcm9hY2g=">https://istio.io/latest/docs/ops/configuration/mesh/app-health-check/#liveness-and-readiness-probes-using-the-http-request-approach<i class="fa fa-external-link-alt"></i></span></li>
+</ul>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
     <link itemprop="mainEntityOfPage" href="http://jwcheong0420.github.io/2021/05/25/express-cannot-set-headers/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1702,125 +1853,6 @@
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
-    <link itemprop="mainEntityOfPage" href="http://jwcheong0420.github.io/2018/08/09/how-to-install-k8s/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Joowon Cheong">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="삽질특기생">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2018/08/09/how-to-install-k8s/" class="post-title-link" itemprop="url">k8s 설치 방법</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2018-08-09 18:38:15" itemprop="dateCreated datePublished" datetime="2018-08-09T18:38:15+09:00">2018-08-09</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/cloud/" itemprop="url" rel="index"><span itemprop="name">cloud</span></a>
-                </span>
-                  , 
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/cloud/k8s/" itemprop="url" rel="index"><span itemprop="name">k8s</span></a>
-                </span>
-            </span>
-
-          
-  
-  <span class="post-meta-item">
-    
-      <span class="post-meta-item-icon">
-        <i class="far fa-comment"></i>
-      </span>
-      <span class="post-meta-item-text">Disqus: </span>
-    
-    <a title="disqus" href="/2018/08/09/how-to-install-k8s/#disqus_thread" itemprop="discussionUrl">
-      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2018/08/09/how-to-install-k8s/" itemprop="commentCount"></span>
-    </a>
-  </span>
-  
-  
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>k8s의 pod에 대해 조사를 해야하는 일이 생겨서 개인 컴퓨터에 k8s를 설치해보았다.<br>원래 k8s는 세 대 이상의 클러스터에 구성할 것을 권장하는 것으로 알고 있지만 나는 테스트용이므로 한 대로만 구성하였다.<br>k8s가 무엇인지 간략하게 알아보고, 설치 과정에 대해 기술하도록 하겠다.</p>
-<h2 id="kubernetes란"><a href="#kubernetes란" class="headerlink" title="kubernetes란"></a>kubernetes란</h2><p>kubernete(k8s)는 docker orchetration tool로, application container의 deploy, scaling, operating 자동화를 위한 플랫폼이다.<br>쉽게 설명하자면 k8s는 사용자가 기대하는 상태로 동작하도록 application을 생성하고 실행 상태를 유지하는 것이 목적이라고 할 수 있다.<br>k8s는 여러 노드를 하나의 클러스터로 관리하는데, 하나의 master node와 그 외 여러 일반 node로 구성된다. <del>일반 node는 minions라고도 불리는 모양이다.(미니언즈라니…귀여워…)</del><br>master node에는 클러스터를 관리하는 목적의 controller pod들이 실행되어야 한다.<br>일반 node들은 kubelet 데몬과 docker 데몬이 실행되고 있어야 하며, container의 묶음인 pod들이 실행되는 형태이다.</p>
-<blockquote>
-<p>20&#x2F;04&#x2F;06 수정<br>minion이라고 불렸던 것은 아주 오래전의 얘기인 것 같다. 이 <a target="_blank" rel="noopener" href="https://github.com/kubernetes/kubernetes/issues/1111">github issue</a>에서 minion이라는 용어가 헷갈리므로 변경하자는 의견이 오고 갔다.</p>
-</blockquote>
-<h2 id="k8s-설치-방법"><a href="#k8s-설치-방법" class="headerlink" title="k8s 설치 방법"></a>k8s 설치 방법</h2><h3 id="docker-설치"><a href="#docker-설치" class="headerlink" title="docker 설치"></a>docker 설치</h3><p>우선 k8s가 docker 기반의 container를 관리하므로, docker를 설치해야한다.<br>나는 이미 설치되어있어서 해당 과정을 생략했는데, <a target="_blank" rel="noopener" href="https://docs.docker.com/install/linux/docker-ce/ubuntu/#install-using-the-repository">docker 공식 홈페이지의 설치 방법</a>을 참고하여 설치하면 된다.</p>
-<h3 id="k8s-설치"><a href="#k8s-설치" class="headerlink" title="k8s 설치"></a>k8s 설치</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">$ curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add</span><br><span class="line">$ vi /etc/apt/sources.list.d/kubernetes.list</span><br><span class="line">deb http://apt.kubernetes.io/ kubernetes-xenial main</span><br><span class="line">$ apt-get update</span><br><span class="line">$ apt-get install --no-install-recommends kubelet kubeadm kubernetes-cni</span><br></pre></td></tr></table></figure>
-<p>패키지 설치 시 –no-install-recommends 옵션은 해당 패지키가 실행되는 데 필요한 패키지만을 설치하겠다는 옵션이다.<br>잡다한 패키지까지 설치하는 게 싫어서 나는 항상 이 옵션을 주고 설치하는데, 저 옵션 없이 설치해도 무방하다.</p>
-<h3 id="kubelet-설정"><a href="#kubelet-설정" class="headerlink" title="kubelet 설정"></a>kubelet 설정</h3><p>swap 설정을 해주어야 한다.</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">$ sed -i <span class="string">&#x27;9s/^/Environment=&quot;KUBELET_EXTRA_ARGS=--fail-swap-on=false&quot;\n/&#x27;</span> /etc/systemd/system/kubelet.service.d/10-kubeadm.conf</span><br><span class="line">$ systemctl daemon-reload</span><br><span class="line">$ systemctl restart kubelet</span><br></pre></td></tr></table></figure>
-
-<h3 id="master-init"><a href="#master-init" class="headerlink" title="master init"></a>master init</h3><h4 id="kubeadm-init"><a href="#kubeadm-init" class="headerlink" title="kubeadm init"></a>kubeadm init</h4><p>kubeadm을 init해야한다.</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ kubeadm init --pod-network-cidr=10.244.0.0/16 --ignore-preflight-errors Swap</span><br></pre></td></tr></table></figure>
-<p>–pod-network-cidr&#x3D;10.244.0.0&#x2F;16은 flannel을 사용하기 위한 옵션이고, –ignore-preflight-errors Swap은 swap 에러를 무시하기 위한 옵션이다.<br>위 커맨드를 실행하면 To start using your cluster라며 아래와 같은 커맨드가 나열될 것이다.<br>하라는 대로 따라 치면 되겠다.</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">$ <span class="built_in">mkdir</span> -p <span class="variable">$HOME</span>/.kube</span><br><span class="line">$ <span class="built_in">cp</span> -i /etc/kubernetes/admin.conf <span class="variable">$HOME</span>/.kube/config</span><br><span class="line">$ <span class="built_in">chown</span> $(<span class="built_in">id</span> -u):$(<span class="built_in">id</span> -g) <span class="variable">$HOME</span>/.kube/config</span><br></pre></td></tr></table></figure>
-
-<h4 id="flannel-적용"><a href="#flannel-적용" class="headerlink" title="flannel 적용"></a>flannel 적용</h4><p>보통 pod의 network로 flannel을 많이 사용한다.</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/v0.9.1/Documentation/kube-flannel.yml</span><br></pre></td></tr></table></figure>
-
-<h4 id="master-node에-schedule-가능하도록-설정"><a href="#master-node에-schedule-가능하도록-설정" class="headerlink" title="master node에 schedule 가능하도록 설정"></a>master node에 schedule 가능하도록 설정</h4><p>원래 master node에는 schedule하지 않는 것이 default 설정이다. 즉 master node에는 별도의 설정이 없으면 pod이 뜨지 않는다.<br>현재 나의 테스트 환경은 single-node cluster이므로, master에 schedule이 가능하도록 설정을 바꿔야 한다.</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ kubectl taint nodes --all node-role.kubernetes.io/master-</span><br></pre></td></tr></table></figure>
-<p>결과로 node ‘&lt;hostname&gt;‘ untainted가 나오면 성공이다.</p>
-<h2 id="trouble-shooting"><a href="#trouble-shooting" class="headerlink" title="trouble shooting"></a>trouble shooting</h2><h3 id="reboot시-node-not-ready-에러-발생"><a href="#reboot시-node-not-ready-에러-발생" class="headerlink" title="reboot시 node not ready 에러 발생"></a>reboot시 node not ready 에러 발생</h3><p>reboot 시 node not ready 에러가 발생했다.<br>에러는 다음과 같은 커맨드로 node 정보를 조회하여 확인하였고, 여기서 dev는 node 이름이다.</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ kubectl describe node dev</span><br></pre></td></tr></table></figure>
-<blockquote>
-<p>Ready            False   Tue, 15 May 2018 10:35:18 +0900   Tue, 15 May 2018 10:26:25 +0900   KubeletNotReady              runtime network not ready: NetworkReady&#x3D;false reason:NetworkPluginNotReady message:docker: network plugin is not ready: cni config uninitialized</p>
-</blockquote>
-<p>&#x2F;etc&#x2F;systemd&#x2F;system&#x2F;10-kubeadm.conf에서 KUBELET_NETWORK_ARGS line을 삭제했더니 정상 동작하였다.<br>해당 과정은 <a target="_blank" rel="noopener" href="https://github.com/kubernetes/kubernetes/issues/48798">kubernetes github</a>을 참고하였다.</p>
-<h3 id="swap-에러-발생"><a href="#swap-에러-발생" class="headerlink" title="swap 에러 발생"></a>swap 에러 발생</h3><p>master init 과정에서 다음 커맨드를 실행했을 때 swap을 disable하지 않았다며 에러가 발생했다.</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ kubeadm init</span><br></pre></td></tr></table></figure>
-<blockquote>
-<p>[ERROR Swap]: running with swap on is not supported. Please disable swap<br>[preflight] If you know what you are doing, you can make a check non-fatal with <code>--ignore-preflight-errors=...</code></p>
-</blockquote>
-<p>위의 kubelet 설정 방법대로 따라하고, kubeadm init시 swap error를 ignore하는 설정을 잊지 않도록 한다.</p>
-<h2 id="마무리"><a href="#마무리" class="headerlink" title="마무리"></a>마무리</h2><p>이 포스팅에서는 k8s를 설치하는 방법에 대해서 알아보았다.<br>시작이 반이라지만 k8s를 설치한 것만으로 반을 했다고 볼 수는 없다ㅋㅋㅋ<br>k8s를 제대로 사용하려면 pod도 알아야하고 service와 deployment 등등 알아야할 것이 산더미이다.<br>시간이 되는 대로 내가 조사한 것에 대해 포스팅을 해야겠다.</p>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
@@ -1890,7 +1922,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">16</span>
+          <span class="site-state-item-count">17</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
@@ -1903,7 +1935,7 @@
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">46</span>
+        <span class="site-state-item-count">49</span>
         <span class="site-state-item-name">tags</span></a>
       </div>
   </nav>
@@ -1930,7 +1962,7 @@
 <div class="copyright">
   
   &copy; 
-  <span itemprop="copyrightYear">2022</span>
+  <span itemprop="copyrightYear">2023</span>
   <span class="with-love">
     <i class="fa fa-heart"></i>
   </span>
